@@ -1,0 +1,13 @@
+[package]
+name = "trillek"
+version = "0.1.0"
+authors = ["doobs"]
+
+[dependencies]
+glium = "*"
+glutin = "0.9"
+cgmath = "0.15"
+genmesh = "0.4"
+image = "0.15"
+obj = { version = "0.5", features = ["usegenmesh"] }
+rand = "0.3"

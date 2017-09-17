@@ -1,16 +1,19 @@
+pub mod camera;
+pub mod event_handler;
+
 use glium;
 use glium::glutin;
 use std::thread;
 use std::time::{Duration, Instant};
 
-mod renderer;
+use graphics::renderer;
 
 const WINDOW_DIMENSIONS: (u32, u32) = (800, 500);
 static WINDOW_TITLE: &'static str = "0x10c";
 
 pub struct Game {
     current_state: Box<GameState>,
-    events_loop: glutin::EventsLoop,
+    event_handler: event_handler::EventHandler,
 }
 
 impl Game {
@@ -24,7 +27,7 @@ impl Game {
 
         Game {
             current_state: Box::new(MainGameState::new(display)),
-            events_loop,
+            event_handler: event_handler::EventHandler::new(events_loop),
         }
     }
 
@@ -32,22 +35,9 @@ impl Game {
         let mut accumulator = Duration::new(0, 0);
         let mut previous_clock = Instant::now();
 
-        let events_loop = &mut self.events_loop;
-        let current_state = &mut self.current_state;
-        let mut close_requested = false;
-
         loop {
-            events_loop.poll_events(|event| {
-                // TODO: Handle key inputs.
-                match event {
-                    glutin::Event::WindowEvent { event, .. } => match event {
-                        glutin::WindowEvent::Closed => close_requested = true,
-                        _ => (),
-                    },
-                    _ => (),
-                }
-            });
-            if close_requested {
+            self.event_handler.tick();
+            if self.event_handler.close_requested() {
                 break;
             }
 
@@ -59,8 +49,8 @@ impl Game {
             while accumulator >= fixed_time_stamp {
                 accumulator -= fixed_time_stamp;
 
-                current_state.tick();
-                current_state.render();
+                self.current_state.tick();
+                self.current_state.render();
             }
 
             thread::sleep(fixed_time_stamp - accumulator);
@@ -78,12 +68,14 @@ trait GameState {
 }
 
 struct MainGameState {
+    camera: camera::Camera,
     renderer: renderer::Renderer,
 }
 
 impl MainGameState {
     pub fn new(display: glium::Display) -> MainGameState {
         MainGameState {
+            camera: camera::Camera::new(WINDOW_DIMENSIONS.0, WINDOW_DIMENSIONS.1),
             renderer: renderer::Renderer::new(display),
         }
     }

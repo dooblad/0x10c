@@ -6,7 +6,8 @@ extern crate image;
 use std::fs::File;
 use std::io::Read;
 
-mod game;
+pub mod game;
+pub mod graphics;
 
 fn main() {
     let mut game = game::Game::new();

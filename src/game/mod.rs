@@ -35,9 +35,10 @@ impl Game {
         let mut accumulator = Duration::new(0, 0);
         let mut previous_clock = Instant::now();
 
+        let event_handler = &mut self.event_handler;
         loop {
-            self.event_handler.tick();
-            if self.event_handler.close_requested() {
+            event_handler.tick();
+            if event_handler.close_requested() {
                 break;
             }
 
@@ -49,7 +50,7 @@ impl Game {
             while accumulator >= fixed_time_stamp {
                 accumulator -= fixed_time_stamp;
 
-                self.current_state.tick();
+                self.current_state.tick(&event_handler);
                 self.current_state.render();
             }
 
@@ -63,7 +64,7 @@ impl Game {
 //
 
 trait GameState {
-    fn tick(&mut self);
+    fn tick(&mut self, event_handler: &event_handler::EventHandler);
     fn render(&mut self);
 }
 
@@ -82,11 +83,12 @@ impl MainGameState {
 }
 
 impl GameState for MainGameState {
-    fn tick(&mut self) {
+    fn tick(&mut self, event_handler: &event_handler::EventHandler) {
+        self.camera.tick(&event_handler);
     }
 
     fn render(&mut self) {
-        self.renderer.render()
+        self.renderer.render(&self.camera);
     }
 }
 

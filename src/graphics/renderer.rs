@@ -1,6 +1,8 @@
+use cgmath;
 use glium;
 use glium::Surface;
 
+use game::camera;
 use graphics::cube_mesh;
 use graphics::cube_mesh::Drawable;
 
@@ -15,6 +17,8 @@ pub struct Renderer {
 pub struct RenderingContext<'a> {
     pub program: &'a glium::Program,
     pub target: &'a mut glium::Frame,
+    pub view_matrix: &'a cgmath::Matrix4<f32>,
+    pub projection_matrix: &'a cgmath::Matrix4<f32>,
 }
 
 impl Renderer {
@@ -45,12 +49,14 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self) {
+    pub fn render(&mut self, camera: &camera::Camera) {
         let mut target = self.display.draw();
         {
             let mut context = RenderingContext {
                 program: &self.program,
                 target: &mut target,
+                view_matrix: &camera.view_matrix,
+                projection_matrix: &camera.projection_matrix,
             };
             context.target.clear_color_and_depth((0.0, 0.0, 0.0, 0.0), 1.0);
 

@@ -1,9 +1,13 @@
 use glium;
 use glium::glutin;
+use std::collections::HashSet;
 
 pub struct EventHandler {
     events_loop: glutin::EventsLoop,
     close_requested: bool,
+    mouse_delta: (f64, f64),
+    pressed_mouse_buttons: HashSet<u32>,
+    pressed_keys: HashSet<glutin::VirtualKeyCode>,
 }
 
 impl EventHandler {
@@ -11,11 +15,20 @@ impl EventHandler {
         EventHandler {
             events_loop,
             close_requested: false,
+            mouse_delta: (0.0, 0.0),
+            pressed_mouse_buttons: HashSet::new(),
+            pressed_keys: HashSet::new(),
         }
     }
 
     pub fn tick(&mut self) {
         let close_requested = &mut self.close_requested;
+        let mouse_delta = &mut self.mouse_delta;
+        let pressed_mouse_buttons = &mut self.pressed_mouse_buttons;
+        let pressed_keys = &mut self.pressed_keys;
+
+        *mouse_delta = (0.0, 0.0);
+
         self.events_loop.poll_events(|event| {
             use glium::glutin::Event::{Awakened, DeviceEvent, WindowEvent};
 
@@ -25,18 +38,39 @@ impl EventHandler {
                     _ => (),
                 },
                 DeviceEvent { event, .. } => {
-                    use glium::glutin::DeviceEvent::{Added, Removed, Motion, Button, Key, Text};
+                    use glium::glutin::DeviceEvent::*;
                     match event {
                         Added => (),
                         Removed => (),
                         Motion { axis, value, } => {
-                            println!("Axis: {}, Value: {}", axis, value);
+                            match axis {
+                                0 => mouse_delta.0 += value,
+                                1 => mouse_delta.1 += value,
+                                _ => eprintln!("Unknown mouse axis {}", axis),
+                            }
                         },
                         Button { button, state, } => {
-                            println!("Button: {}, State: {:?}", button, state);
+                            match state {
+                                glutin::ElementState::Pressed => {
+                                    pressed_mouse_buttons.insert(button);
+                                },
+                                glutin::ElementState::Released => {
+                                    pressed_mouse_buttons.remove(&button);
+                                },
+                            }
                         },
-                        Key(input) => {
-
+                        Key(input) => match input {
+                            glutin::KeyboardInput { state, virtual_keycode: Some(key), .. } => {
+                                match state {
+                                    glutin::ElementState::Pressed => {
+                                        pressed_keys.insert(key);
+                                    },
+                                    glutin::ElementState::Released => {
+                                        pressed_keys.remove(&key);
+                                    },
+                                }
+                            },
+                            _ => {}
                         },
                         Text { codepoint } => {
                             println!("Codepoint: {}", codepoint);
@@ -50,5 +84,21 @@ impl EventHandler {
 
     pub fn close_requested(&self) -> bool {
         return self.close_requested;
+    }
+
+    pub fn mouse_delta(&self) -> (f64, f64) {
+        return self.mouse_delta;
+    }
+
+    pub fn is_left_mouse_down(&self) -> bool {
+        return self.pressed_mouse_buttons.contains(&1);
+    }
+
+    pub fn is_right_mouse_down(&self) -> bool {
+        return self.pressed_mouse_buttons.contains(&3);
+    }
+
+    pub fn is_key_down(&self, key: &glutin::VirtualKeyCode) -> bool {
+        return self.pressed_keys.contains(key);
     }
 }

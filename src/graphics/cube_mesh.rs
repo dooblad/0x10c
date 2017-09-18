@@ -203,6 +203,8 @@ impl Drawable for CubeMesh {
             .. Default::default()
         };
 
+        // TODO: How to pass around matrices?
+        // Model will be per-mesh.
         let uniforms = uniform! {
             model: model,
             view: view,

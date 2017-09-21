@@ -1,4 +1,3 @@
-use cgmath;
 use glium;
 use glium::Surface;
 
@@ -17,8 +16,7 @@ pub struct Renderer {
 pub struct RenderingContext<'a> {
     pub program: &'a glium::Program,
     pub target: &'a mut glium::Frame,
-    pub view_matrix: &'a cgmath::Matrix4<f32>,
-    pub projection_matrix: &'a cgmath::Matrix4<f32>,
+    pub camera: &'a camera::Camera,
 }
 
 impl Renderer {
@@ -55,8 +53,7 @@ impl Renderer {
             let mut context = RenderingContext {
                 program: &self.program,
                 target: &mut target,
-                view_matrix: &camera.view_matrix,
-                projection_matrix: &camera.projection_matrix,
+                camera,
             };
             context.target.clear_color_and_depth((0.0, 0.0, 0.0, 0.0), 1.0);
 

@@ -1,13 +1,18 @@
 use cgmath;
 use cgmath::InnerSpace;
+use glium::glutin;
 use std;
+use std::ops::Neg;
 
 use game::event_handler;
+
+const MOVE_SPEED: f32 = 0.1;
+const ROTATION_SPEED: f32 = 0.1;
 
 pub struct Camera {
     pub view_matrix: cgmath::Matrix4<f32>,
     pub projection_matrix: cgmath::Matrix4<f32>,
-    pub position: cgmath::Vector3<f32>,
+    pub position: cgmath::Point3<f32>,
     pub horizontal_angle: f32,
     pub vertical_angle: f32,
 }
@@ -23,9 +28,10 @@ impl Camera {
 
         let horizontal_angle = 0.0;
         let vertical_angle = 0.0;
-        let position = cgmath::Vector3::new(0.0, 0.0, 0.0f32);
+//        let position = cgmath::Point3::new(0.0, 0.0, 0.0f32);
+        let position = cgmath::Point3::new(0.5, 0.2, -3.0f32);
 
-        let view_matrix = Camera::view_matrix_from(&position, horizontal_angle, vertical_angle);
+        let view_matrix = Self::view_matrix_from(&position, horizontal_angle, vertical_angle);
 
         Camera {
             view_matrix,
@@ -37,84 +43,80 @@ impl Camera {
     }
 
     pub fn tick(&mut self, event_handler: &event_handler::EventHandler) {
+        let (mouse_x, mouse_y) = event_handler.mouse_delta();
+        let mouse_x = mouse_x as f32 * ROTATION_SPEED;
+        let mouse_y = mouse_y as f32 * ROTATION_SPEED;
+        self.horizontal_angle += mouse_x / 100.0;
+        self.vertical_angle += mouse_y / 100.0;
+
+        let (facing_dir, right_dir, up_dir) = Self::characteristic_vectors(self.horizontal_angle,
+                                                                           self.vertical_angle);
+        let facing_dir = facing_dir * MOVE_SPEED;
+        let right_dir = right_dir * MOVE_SPEED;
+        let up_dir = up_dir * MOVE_SPEED;
+
+        // Forward
+        if event_handler.is_key_down(&glutin::VirtualKeyCode::W) {
+            self.position += facing_dir;
+        }
+        // Backward
+        if event_handler.is_key_down(&glutin::VirtualKeyCode::S) {
+            self.position += facing_dir.neg();
+        }
+        // Left
+        if event_handler.is_key_down(&glutin::VirtualKeyCode::A) {
+            self.position += right_dir;
+        }
+        // Right
+        if event_handler.is_key_down(&glutin::VirtualKeyCode::D) {
+            self.position += right_dir.neg();
+        }
+        // Up
+        if event_handler.is_key_down(&glutin::VirtualKeyCode::Space) {
+            self.position += up_dir;
+        }
+        // Down
+        if event_handler.is_key_down(&glutin::VirtualKeyCode::LShift) {
+            self.position += up_dir.neg();
+        }
+
         self.view_matrix = Camera::view_matrix_from(&self.position, self.horizontal_angle,
                                                     self.vertical_angle);
     }
 
-    fn view_matrix_from(position: &cgmath::Vector3<f32>, horizontal_angle: f32, vertical_angle: f32)
+    pub fn view_matrix(&self) -> cgmath::Matrix4<f32> {
+        return self.view_matrix
+    }
+
+    pub fn projection_matrix(&self) -> cgmath::Matrix4<f32> {
+        return self.projection_matrix
+    }
+
+    fn view_matrix_from(position: &cgmath::Point3<f32>, horizontal_angle: f32, vertical_angle: f32)
         -> cgmath::Matrix4<f32> {
-        let (facing_dir, up) = Camera::characteristic_vectors(horizontal_angle, vertical_angle);
-        Camera::view_matrix(&position, &(position + facing_dir), &up)
+        let (facing_dir, _, up) = Self::characteristic_vectors(horizontal_angle, vertical_angle);
+        // TODO: Inline this function into this one.
+//        Camera::make_view_matrix(&position, &(position + facing_dir), &up)
+        cgmath::Matrix4::look_at(position.clone(), position + facing_dir, up)
     }
 
     fn characteristic_vectors(horizontal_angle: f32, vertical_angle: f32)
-        -> (cgmath::Vector3<f32>, cgmath::Vector3<f32>) {
+        -> (cgmath::Vector3<f32>, cgmath::Vector3<f32>, cgmath::Vector3<f32>) {
         let facing_dir = cgmath::Vector3 {
             x: vertical_angle.cos() * horizontal_angle.sin(),
             y: vertical_angle.sin(),
             z: vertical_angle.cos() * horizontal_angle.cos(),
-        };
+        }.normalize();
 
         let right = cgmath::Vector3 {
             x: (horizontal_angle - std::f32::consts::PI / 2f32).sin(),
             y: 0.0,
             z: (horizontal_angle - std::f32::consts::PI / 2f32).cos(),
-        };
-
-        let up = facing_dir.cross(right);
-
-        (facing_dir, up)
-    }
-
-    /*
-    fn projection_matrix(width: u32, height: u32) -> cgmath::Matrix4<f32> {
-        // TODO: Is this shit backwards?
-        let aspect_ratio = height as f32 / width as f32;
-
-        let fov: f32 = std::f32::consts::PI / 3.0;
-
-        let zfar = 1024.0;
-        let znear = 0.1;
-
-        let f = 1.0 / (fov / 2.0).tan();
-
-        cgmath::Matrix4::from([
-            [f * aspect_ratio, 0.0, 0.0, 0.0],
-            [0.0, f, 0.0, 0.0],
-            [0.0, 0.0, (zfar+znear)/(zfar-znear), 1.0],
-            [0.0, 0.0, -(2.0*zfar*znear)/(zfar-znear), 0.0],
-        ])
-    }
-    */
-
-    fn view_matrix(pos: &cgmath::Vector3<f32>, dir: &cgmath::Vector3<f32>,
-                   up: &cgmath::Vector3<f32>) -> cgmath::Matrix4<f32> {
-        let dir = dir.normalize();
-
-        let s = cgmath::Vector3 {
-            x: up.y * dir.z - up.z * dir.y,
-            y: up.z * dir.x - up.x * dir.z,
-            z: up.x * dir.y - up.y * dir.x,
         }.normalize();
 
-        let u = cgmath::Vector3 {
-            x: dir.y * s.z - dir.z * s.y,
-            y: dir.z * s.x - dir.x * s.z,
-            z: dir.x * s.y - dir.y * s.x,
-        };
+        let up = facing_dir.cross(right).normalize();
 
-        let p = cgmath::Vector3 {
-            x: -pos.x * s.x - pos.y * s.y - pos.z * s.z,
-            y: -pos.x * u.x - pos.y * u.y - pos.z * u.z,
-            z: -pos.x * dir.x - pos.y * dir.y - pos.z * dir.z
-        };
-
-        cgmath::Matrix4::from([
-            [s.x, u.x, dir.x, 0.0],
-            [s.y, u.y, dir.y, 0.0],
-            [s.z, u.z, dir.z, 0.0],
-            [p.x, p.y, p.z, 1.0],
-        ])
+        (facing_dir, right, up)
     }
 }
 

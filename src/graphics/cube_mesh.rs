@@ -1,9 +1,9 @@
 extern crate image;
 
 use cgmath;
+use cgmath::One;
 use glium;
 use glium::Surface;
-use std;
 use std::f32;
 use std::io::Cursor;
 use std::ops::Sub;
@@ -22,6 +22,7 @@ struct Vertex {
 }
 
 pub struct CubeMesh {
+    model_matrix: cgmath::Matrix4<f32>,
     vertex_buffer: glium::VertexBuffer<Vertex>,
     diffuse_texture: glium::texture::SrgbTexture2d,
     normal_map: glium::texture::Texture2d,
@@ -31,7 +32,8 @@ pub struct CubeMesh {
 
 impl CubeMesh {
     pub fn new(display: &glium::Display, size: f32) -> CubeMesh {
-        /*
+        implement_vertex!(Vertex, position, normal, tex_coords);
+
         let s = size / 2.0;
         let base_positions = vec![
             // Front
@@ -70,35 +72,28 @@ impl CubeMesh {
         let positions = Self::expand_indices(&base_positions, &indices);
         let normals = Self::generate_normals(&positions);
 
-        let vertex_buffer = {
-            // TODO: Is this the right place to be calling this macro?
-            implement_vertex!(Vertex, position, normal);
-            let mut vertices: Vec<Vertex> = Vec::with_capacity(positions.len());
-            let vert_iter = positions.chunks(3).zip(normals.chunks(3)).map(|(p, n)| {
-                Vertex {
-                    position: [p[0], p[1], p[2]],
-                    normal: [n[0], n[1], n[2]],
-                }
+        let mut vertices: Vec<Vertex> = Vec::with_capacity(positions.len());
+        for i in 0..positions.len() {
+            let tex_coords = [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [1.0, 1.0],
+                [0.0, 0.0],
+                [1.0, 1.0],
+                [0.0, 1.0],
+//                [0.0, 1.0],
+//                [1.0, 1.0],
+//                [0.0, 0.0],
+//                [1.0, 0.0],
+            ];
+            vertices.push(Vertex {
+                position: positions[i].into(),
+                normal: normals[i].into(),
+                tex_coords: tex_coords[i % tex_coords.len()],
             });
-
-            for vert in vert_iter {
-                vertices.push(vert);
-            }
-
-            glium::VertexBuffer::new(
-                &display.clone(),
-                vertices.as_ref(),
-            ).unwrap()
-        };
-        */
-        implement_vertex!(Vertex, position, normal, tex_coords);
-
-        let vertex_buffer = glium::vertex::VertexBuffer::new(&display.clone(), &[
-            Vertex { position: [-1.0,  1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [0.0, 1.0] },
-            Vertex { position: [ 1.0,  1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [1.0, 1.0] },
-            Vertex { position: [-1.0, -1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [0.0, 0.0] },
-            Vertex { position: [ 1.0, -1.0, 0.0], normal: [0.0, 0.0, -1.0], tex_coords: [1.0, 0.0] },
-        ]).unwrap();
+        }
+        let vertex_buffer = glium::vertex::VertexBuffer::new(&display.clone(),
+                                                             vertices.as_ref()).unwrap();
 
         let image = image::load(Cursor::new(&include_bytes!("../../tuto-14-diffuse.jpg")[..]),
                                 image::JPEG).unwrap().to_rgba();
@@ -113,6 +108,8 @@ impl CubeMesh {
         let normal_map = glium::texture::Texture2d::new(&display.clone(), image).unwrap();
 
         CubeMesh {
+            // Identity matrix.
+            model_matrix: cgmath::Matrix4::one(),
             vertex_buffer,
             diffuse_texture,
             normal_map,
@@ -120,30 +117,28 @@ impl CubeMesh {
         }
     }
 
-    fn expand_indices(base_positions: &Vec<f32>, indices: &Vec<u16>) -> Vec<f32> {
-        let mut positions: Vec<f32> = Vec::new();
+    fn expand_indices(base_positions: &Vec<f32>, indices: &Vec<u16>) -> Vec<cgmath::Point3<f32>> {
+        let mut positions: Vec<cgmath::Point3<f32>> = Vec::new();
         for i in 0..indices.len() {
-            for j in 0..3 {
-                positions.push(base_positions[(indices[i] * 3 + j) as usize]);
-            }
+            positions.push(cgmath::Point3 {
+                x: base_positions[(indices[i] * 3) as usize],
+                y: base_positions[(indices[i] * 3 + 1) as usize],
+                z: base_positions[(indices[i] * 3 + 2) as usize],
+            });
         }
         positions
     }
 
-    fn generate_normals(positions: &Vec<f32>) -> Vec<f32> {
-        let mut normals: Vec<f32> = Vec::new();
+    fn generate_normals(positions: &Vec<cgmath::Point3<f32>>) -> Vec<cgmath::Vector3<f32>> {
+        let mut normals: Vec<cgmath::Vector3<f32>> = Vec::new();
 
         let mut pos_iter = positions.iter().peekable();
         while pos_iter.peek().is_some() {
-            let mut pos_vecs: Vec<cgmath::Vector3<f32>> = Vec::with_capacity(3);
+            let mut pos_vecs: Vec<cgmath::Point3<f32>> = Vec::with_capacity(3);
 
             // There are 3 components for each point and 3 points to form a triangle.
             for _ in 0..3 {
-                pos_vecs.push(cgmath::Vector3 {
-                    x: pos_iter.next().unwrap().clone(),
-                    y: pos_iter.next().unwrap().clone(),
-                    z: pos_iter.next().unwrap().clone(),
-                });
+                pos_vecs.push(pos_iter.next().unwrap().clone());
             }
 
             let vec_diffs = [
@@ -152,10 +147,9 @@ impl CubeMesh {
             ];
             let normal = vec_diffs[0].cross(vec_diffs[1]);
 
+            // Use the same normal for each point of a single triangle.
             for _ in 0..3 {
-                normals.push(normal.x);
-                normals.push(normal.y);
-                normals.push(normal.z);
+                normals.push(normal);
             }
         }
 
@@ -165,34 +159,7 @@ impl CubeMesh {
 
 impl Drawable for CubeMesh {
     fn draw(&mut self, context: &mut renderer::RenderingContext) {
-        let model = [
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0f32]
-        ];
-        let view = view_matrix(&[0.5, 0.2, -3.0], &[-0.5, -0.2, 3.0], &[0.0, 1.0, 0.0]);
-
-        let perspective = {
-            let (width, height) = context.target.get_dimensions();
-            let aspect_ratio = height as f32 / width as f32;
-
-            let fov: f32 = std::f32::consts::PI / 3.0;
-
-            let zfar = 1024.0;
-            let znear = 0.1;
-
-            let f = 1.0 / (fov / 2.0).tan();
-
-            [
-                [f * aspect_ratio, 0.0, 0.0, 0.0],
-                [0.0, f, 0.0, 0.0],
-                [0.0, 0.0, (zfar+znear)/(zfar-znear), 1.0],
-                [0.0, 0.0, -(2.0*zfar*znear)/(zfar-znear), 0.0],
-            ]
-        };
-
-        let light = [0.5 + 1.5 * f32::sin(self.time as f32 / 30f32), 0.4, 0.7f32];
+        let light = [0.5 + 1.5 * f32::sin(self.time as f32 / 30f32), 0.4, -0.7f32];
 
         let params = glium::DrawParameters {
             depth: glium::Depth {
@@ -203,11 +170,15 @@ impl Drawable for CubeMesh {
             .. Default::default()
         };
 
+        let model : [[f32; 4]; 4] = self.model_matrix.into();
+        let view : [[f32; 4]; 4] = context.camera.view_matrix().into();
+        let perspective : [[f32; 4]; 4] = context.camera.projection_matrix().into();
         // TODO: How to pass around matrices?
         // Model will be per-mesh.
         let uniforms = uniform! {
             model: model,
             view: view,
+            // TODO: s/perspective/projection
             perspective: perspective,
             u_light: light,
             diffuse_tex: &self.diffuse_texture,
@@ -216,7 +187,7 @@ impl Drawable for CubeMesh {
 
         context.target.draw(
             &self.vertex_buffer,
-            glium::index::NoIndices(glium::index::PrimitiveType::TriangleStrip),
+            glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
             &context.program,
             &uniforms,
             &params
@@ -224,38 +195,4 @@ impl Drawable for CubeMesh {
 
         self.time += 1;
     }
-}
-
-fn view_matrix(position: &[f32; 3], direction: &[f32; 3], up: &[f32; 3]) -> [[f32; 4]; 4] {
-    let f = {
-        let f = direction;
-        let len = f[0] * f[0] + f[1] * f[1] + f[2] * f[2];
-        let len = len.sqrt();
-        [f[0] / len, f[1] / len, f[2] / len]
-    };
-
-    let s = [up[1] * f[2] - up[2] * f[1],
-             up[2] * f[0] - up[0] * f[2],
-             up[0] * f[1] - up[1] * f[0]];
-
-    let s_norm = {
-        let len = s[0] * s[0] + s[1] * s[1] + s[2] * s[2];
-        let len = len.sqrt();
-        [s[0] / len, s[1] / len, s[2] / len]
-    };
-
-    let u = [f[1] * s_norm[2] - f[2] * s_norm[1],
-             f[2] * s_norm[0] - f[0] * s_norm[2],
-             f[0] * s_norm[1] - f[1] * s_norm[0]];
-
-    let p = [-position[0] * s_norm[0] - position[1] * s_norm[1] - position[2] * s_norm[2],
-             -position[0] * u[0] - position[1] * u[1] - position[2] * u[2],
-             -position[0] * f[0] - position[1] * f[1] - position[2] * f[2]];
-
-    [
-        [s_norm[0], u[0], f[0], 0.0],
-        [s_norm[1], u[1], f[1], 0.0],
-        [s_norm[2], u[2], f[2], 0.0],
-        [p[0], p[1], p[2], 1.0],
-    ]
 }

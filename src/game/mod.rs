@@ -25,6 +25,14 @@ impl Game {
         let context = glutin::ContextBuilder::new();
         let display = glium::Display::new(window, context, &events_loop).unwrap();
 
+        {
+            let gl_window = display.gl_window();
+            // Make cursor invisible.
+            gl_window.set_cursor(glutin::MouseCursor::NoneCursor);
+            // Confine cursor to this window.
+            gl_window.set_cursor_state(glutin::CursorState::Grab).unwrap();
+        }
+
         Game {
             current_state: Box::new(MainGameState::new(display)),
             event_handler: event_handler::EventHandler::new(events_loop),

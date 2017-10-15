@@ -6,7 +6,8 @@ use glium::glutin;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use graphics::renderer;
+use entity;
+use world;
 
 const WINDOW_DIMENSIONS: (u32, u32) = (800, 500);
 static WINDOW_TITLE: &'static str = "0x10c";
@@ -78,25 +79,34 @@ trait GameState {
 
 struct MainGameState {
     camera: camera::Camera,
-    renderer: renderer::Renderer,
+    world: world::World,
 }
 
 impl MainGameState {
     pub fn new(display: glium::Display) -> MainGameState {
+        let camera = camera::Camera::new(WINDOW_DIMENSIONS.0, WINDOW_DIMENSIONS.1);
+        let player = entity::player::Player::new();
+        let world = world::World::new(player, display);
+
         MainGameState {
-            camera: camera::Camera::new(WINDOW_DIMENSIONS.0, WINDOW_DIMENSIONS.1),
-            renderer: renderer::Renderer::new(display),
+            camera,
+            world,
         }
     }
 }
 
 impl GameState for MainGameState {
     fn tick(&mut self, event_handler: &event_handler::EventHandler) {
-        self.camera.tick(&event_handler);
+        self.world.tick(event_handler);
     }
 
     fn render(&mut self) {
-        self.renderer.render(&self.camera);
+        {
+            let player = self.world.player();
+            self.camera.set_view(player.position(), player.rotation());
+        }
+
+        self.world.render(&self.camera);
     }
 }
 

@@ -1,13 +1,17 @@
+extern crate cgmath;
 #[macro_use]
 extern crate glium;
-extern crate cgmath;
 extern crate image;
+extern crate rand;
 
 use std::fs::File;
 use std::io::Read;
 
+pub mod entity;
 pub mod game;
 pub mod graphics;
+pub mod util;
+pub mod world;
 
 fn main() {
     let mut game = game::Game::new();

@@ -7,6 +7,8 @@ pub struct EventHandler {
     close_requested: bool,
     mouse_delta: (f64, f64),
     pressed_mouse_buttons: HashSet<u32>,
+    // Store the currently-pressed keys and the keys that were pressed on the last tick.
+    last_pressed_keys: HashSet<glutin::VirtualKeyCode>,
     pressed_keys: HashSet<glutin::VirtualKeyCode>,
 }
 
@@ -17,6 +19,7 @@ impl EventHandler {
             close_requested: false,
             mouse_delta: (0.0, 0.0),
             pressed_mouse_buttons: HashSet::new(),
+            last_pressed_keys: HashSet::new(),
             pressed_keys: HashSet::new(),
         }
     }
@@ -25,6 +28,8 @@ impl EventHandler {
         let close_requested = &mut self.close_requested;
         let mouse_delta = &mut self.mouse_delta;
         let pressed_mouse_buttons = &mut self.pressed_mouse_buttons;
+        // TODO: Make more efficient.
+        self.last_pressed_keys = self.pressed_keys.clone();
         let pressed_keys = &mut self.pressed_keys;
 
         *mouse_delta = (0.0, 0.0);
@@ -100,5 +105,9 @@ impl EventHandler {
 
     pub fn is_key_down(&self, key: &glutin::VirtualKeyCode) -> bool {
         return self.pressed_keys.contains(key);
+    }
+
+    pub fn is_key_pressed(&self, key: &glutin::VirtualKeyCode) -> bool {
+        return self.pressed_keys.contains(key) && !self.last_pressed_keys.contains(key);
     }
 }

@@ -21,25 +21,20 @@ impl World {
     pub fn new(player: entity::player::Player, display: glium::Display) -> World {
         let mut collidables: Vec<Box<Collide>> = Vec::new();
 
-        collidables.push(Box::new(CollidableCube::new(&display, 5.0, Point3 {
-            x: 0.0,
-            y: -10.0,
-            z: 0.0,
-        }, Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        })));
-        // TODO: Fix the y coordinate system.
-        collidables.push(Box::new(CollidableCube::new(&display, 30.0, Point3 {
-            x: 0.0,
-            y: -30.0,
-            z: 0.0,
-        }, Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        })));
+        for i in 1..10 {
+            let i_f = i as f32;
+            let z = (1.1 * i_f * i_f) + 10.0;
+            let size = i_f * 2.0;
+            collidables.push(Box::new(CollidableCube::new(&display, size, Point3 {
+                x: 0.0,
+                y: -15.0,
+                z,
+            }, Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            })));
+        }
 
         World {
             player,

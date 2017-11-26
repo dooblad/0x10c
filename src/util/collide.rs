@@ -1,27 +1,27 @@
-use graphics::Render;
 use std;
+
+use graphics::Render;
 use util::math::{Point3, Vector3};
-use util::f32::abs;
 
 pub struct AABB {
-    corners: (Point3, Point3),
+    bounds: [Range; 3],
     position: Point3,
+}
+
+#[derive(Debug)]
+pub struct Range {
+    pub min: f32,
+    pub max: f32,
 }
 
 pub trait Collide : Render {
     fn aabb(&self) -> &AABB;
 }
 
-#[derive(Debug)]
-struct Range {
-    min: f32,
-    max: f32,
-}
-
 impl AABB {
-    pub fn new(a_corner: Point3, b_corner: Point3, position: Point3) -> AABB {
+    pub fn new(bounds: [Range; 3], position: Point3) -> AABB {
         AABB {
-            corners: (a_corner, b_corner),
+            bounds,
             position,
         }
     }
@@ -38,102 +38,83 @@ impl AABB {
         self.position = position;
     }
 
-    pub fn collide(&self, other: &AABB) -> Option<Vector3> {
-        let self_extrema = self.extrema();
-        let other_extrema = other.extrema();
+    pub fn collide(&self, intent: Vector3, other: &AABB) -> Option<Vector3> {
+        let intended_position = self.position + intent;
+        let other_sum = other.minkowski_sum(self);
+        let other_bounds = other_sum.world_bounds();
 
-        let epsilon = 0.00001;
-
-        // (index, magnitude)
-        let mut min_translation: Option<(usize, f32)> = None;
+        let mut min_mtv_axis = 0;
+        let mut min_resolve_val = std::f32::INFINITY;
         for i in 0..3 {
-            let mut translation = 0.0;
-            if self_extrema[i].max < other_extrema[i].min ||
-                self_extrema[i].min > other_extrema[i].max {
-                // Not colliding.
-                return None;
-            } else if self_extrema[i].min <= other_extrema[i].min &&
-                self_extrema[i].max >= other_extrema[i].min {
-                // Colliding from the left.
-                translation = (other_extrema[i].min - self_extrema[i].max) - epsilon;
-            } else if self_extrema[i].max >= other_extrema[i].max &&
-                self_extrema[i].min <= other_extrema[i].max {
-                // Colliding from the right.
-                translation = (other_extrema[i].max - self_extrema[i].min) + epsilon;
-            } else if self_extrema[i].min <= other_extrema[i].min &&
-                self_extrema[i].max >= other_extrema[i].max {
-                // Engulfing the other object.
-                let left_translation = -(other_extrema[i].min - self_extrema[i].min) - epsilon;
-                let right_translation = (self_extrema[i].max - other_extrema[i].max) + epsilon;
-
-                translation = if abs(left_translation) < abs(right_translation) {
-                    left_translation
+            if intended_position[i] > other_bounds[i].min && intended_position[i] < other_bounds[i].max {
+                let resolve_val = if intent[i] > 0.0 {
+                    -(intended_position[i] - other_bounds[i].min)
                 } else {
-                    right_translation
-                }
-            } else if self_extrema[i].min >= other_extrema[i].min &&
-                self_extrema[i].max <= other_extrema[i].max {
-                // The other object is engulfing us.
-                let left_translation = -(self_extrema[i].min - other_extrema[i].min) - epsilon;
-                let right_translation = (other_extrema[i].max - self_extrema[i].max) + epsilon;
+                    -(intended_position[i] - other_bounds[i].max)
+                };
 
-                translation = if abs(left_translation) < abs(right_translation) {
-                    left_translation
-                } else {
-                    right_translation
+                if resolve_val.abs() < min_resolve_val.abs() {
+                    min_mtv_axis = i;
+                    min_resolve_val = resolve_val;
                 }
             } else {
-                panic!("We should have covered all cases!");
-            }
-
-            min_translation = match min_translation {
-                None => Some((i, translation)),
-                Some((j, v)) => if abs(translation) < abs(v) {
-                    Some((i, translation))
-                } else {
-                    Some((j, v))
-                }
+                return None;
             }
         }
 
-        let (min_index, min_translation) = min_translation.unwrap();
-        let mut mtv = Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        };
-        mtv[min_index] = min_translation;
+        let mut mtv = Vector3 { x: 0.0, y: 0.0, z: 0.0 };
+        mtv[min_mtv_axis] = min_resolve_val;
 
-        Some(mtv)
+        return Some(mtv);
     }
 
-    fn extrema(&self) -> [Range; 3] {
-        let mut result: [Range; 3] = [
+    fn minkowski_sum(&self, other: &AABB) -> AABB {
+        let mut sum_bounds = [
             Range { min: 0.0, max: 0.0 },
             Range { min: 0.0, max: 0.0 },
             Range { min: 0.0, max: 0.0 },
         ];
-
         for i in 0..3 {
-            let (min, max) = if self.corners.0[i] < self.corners.1[i] {
-                (self.corners.0[i], self.corners.1[i])
-            } else {
-                (self.corners.1[i], self.corners.0[i])
-            };
-            result[i] = Range {
-                min: min + self.position[i],
-                max: max + self.position[i],
-            };
+            sum_bounds[i].min = self.bounds[i].min - other.bounds[i].max;
+            sum_bounds[i].max = self.bounds[i].max - other.bounds[i].min;
         }
-        result
+        AABB {
+            bounds: sum_bounds,
+            position: self.position.clone(),
+        }
+    }
+
+fn world_bounds(&self) -> [Range; 3] {
+        let mut world_bounds = [
+            self.bounds[0].clone(),
+            self.bounds[1].clone(),
+            self.bounds[2].clone(),
+        ];
+        for i in 0..3 {
+            world_bounds[i].min += self.position[i];
+            world_bounds[i].max += self.position[i];
+        }
+        world_bounds
     }
 }
 
 impl Clone for AABB {
     fn clone(&self) -> AABB {
+        let bounds: [Range; 3] = [
+            self.bounds[0].clone(),
+            self.bounds[1].clone(),
+            self.bounds[2].clone(),
+        ];
+
         AABB {
-            corners: (self.corners.0.clone(), self.corners.1.clone()),
+            bounds,
             position: self.position.clone(),
         }
+    }
+}
+
+impl Clone for Range {
+    fn clone(&self) -> Range {
+        Range { min: self.min, max: self.max }
     }
 }

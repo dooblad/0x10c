@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 use graphics::Render;
 use graphics::renderer;
-use util::collide::AABB;
+use util::collide::{AABB, Range};
 use util::collide::Collide;
 use util::math::{Matrix4, Point3, Vector3};
 
@@ -29,6 +29,8 @@ pub struct CollidableCube {
 
 impl CollidableCube {
     pub fn new(display: &glium::Display, size: f32, position: Point3, velocity: Vector3) -> CollidableCube {
+        assert!(size > 0.0);
+
         implement_vertex!(Vertex, position, tex_coords);
 
         let s = size / 2.0;
@@ -93,13 +95,14 @@ impl CollidableCube {
         let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
         let diffuse_texture = glium::texture::SrgbTexture2d::new(&display.clone(), image).unwrap();
 
+        let bounds = [
+            Range { min: -s, max: s },
+            Range { min: -s, max: s },
+            Range { min: -s, max: s },
+        ];
+
         CollidableCube {
-            aabb: AABB::new(Point3 {
-                x: -s, y: -s, z: -s,
-            },
-            Point3 {
-                x: s, y: s, z: s,
-            }, position),
+            aabb: AABB::new(bounds, position),
             velocity,
             model_matrix: Matrix4::identity(),
             vertex_buffer,

@@ -1,6 +1,6 @@
 extern crate cgmath;
-#[macro_use]
-extern crate glium;
+extern crate gl;
+extern crate glutin;
 extern crate image;
 extern crate rand;
 

@@ -1,5 +1,5 @@
 use cgmath::InnerSpace;
-use glium::glutin::VirtualKeyCode;
+use glutin::VirtualKeyCode;
 use std;
 use std::ops::Neg;
 

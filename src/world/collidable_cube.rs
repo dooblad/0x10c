@@ -1,37 +1,27 @@
-extern crate image;
-
-use cgmath;
 use cgmath::SquareMatrix;
-use glium;
-use glium::Surface;
+use gl::types::GLfloat;
+//use image;
 use std::f32;
-use std::io::Cursor;
+//use std::io::Cursor;
 
+use graphics;
 use graphics::Render;
 use graphics::renderer;
 use util::collide::{AABB, Range};
 use util::collide::Collide;
 use util::math::{Matrix4, Point3, Vector3};
 
-#[derive(Copy, Clone)]
-struct Vertex {
-    position: [f32; 3],
-    tex_coords: [f32; 2],
-}
-
 pub struct CollidableCube {
     aabb: AABB,
-    velocity: Vector3,
+//    velocity: Vector3,
     model_matrix: Matrix4,
-    vertex_buffer: glium::VertexBuffer<Vertex>,
-    diffuse_texture: glium::texture::SrgbTexture2d,
+    mesh: graphics::Mesh,
+//    diffuse_texture: graphics::Texture,
 }
 
 impl CollidableCube {
-    pub fn new(display: &glium::Display, size: f32, position: Point3, velocity: Vector3) -> CollidableCube {
+    pub fn new(size: f32, position: Point3) -> CollidableCube {
         assert!(size > 0.0);
-
-        implement_vertex!(Vertex, position, tex_coords);
 
         let s = size / 2.0;
         let base_positions = vec![
@@ -69,31 +59,33 @@ impl CollidableCube {
         ];
 
         let positions = Self::expand_indices(&base_positions, &indices);
-        // let normals = Self::generate_normals(&positions);
+        let normals = Self::generate_normals(&positions);
 
-        let mut vertices: Vec<Vertex> = Vec::with_capacity(positions.len());
-        for i in 0..positions.len() {
-            let tex_coords = [
-                [0.0, 0.0],
-                [1.0, 0.0],
-                [1.0, 1.0],
-                [0.0, 0.0],
-                [1.0, 1.0],
-                [0.0, 1.0],
-            ];
-            vertices.push(Vertex {
-                position: positions[i].into(),
-                tex_coords: tex_coords[i % tex_coords.len()],
-            });
+        let base_tex_coords = [
+            // Lower right triangle
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0,
+            // Upper left triangle
+            0.0, 0.0,
+            1.0, 1.0,
+            0.0, 1.0,
+        ];
+        let num_tex_coords = (positions.len() / 3) * 2;
+        let mut tex_coords = Vec::with_capacity(num_tex_coords);
+        for i in 0..num_tex_coords {
+            tex_coords.push(base_tex_coords[i % base_tex_coords.len()]);
         }
-        let vertex_buffer = glium::vertex::VertexBuffer::new(&display.clone(),
-                                                             vertices.as_ref()).unwrap();
 
-        let image = image::load(Cursor::new(&include_bytes!("../../tuto-14-diffuse.jpg")[..]),
-                                image::JPEG).unwrap().to_rgba();
-        let image_dimensions = image.dimensions();
-        let image = glium::texture::RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
-        let diffuse_texture = glium::texture::SrgbTexture2d::new(&display.clone(), image).unwrap();
+        let mesh = graphics::Mesh::new(positions, Some(normals), Some(tex_coords));
+
+        /*
+        let image = image::load(
+            Cursor::new(&include_bytes!("../../tuto-14-diffuse.jpg")[..]),
+            image::JPEG
+        ).unwrap().to_rgba();
+        let diffuse_texture = graphics::Texture::new(image);
+        */
 
         let bounds = [
             Range { min: -s, max: s },
@@ -103,10 +95,10 @@ impl CollidableCube {
 
         CollidableCube {
             aabb: AABB::new(bounds, position),
-            velocity,
+//            velocity,
             model_matrix: Matrix4::identity(),
-            vertex_buffer,
-            diffuse_texture,
+            mesh,
+//            diffuse_texture,
         }
     }
 
@@ -120,46 +112,47 @@ impl CollidableCube {
         self.model_matrix
     }
 
-    fn expand_indices(base_positions: &Vec<f32>, indices: &Vec<u16>) -> Vec<cgmath::Point3<f32>> {
-        let mut positions: Vec<Point3> = Vec::new();
+    fn expand_indices(base_positions: &Vec<GLfloat>, indices: &Vec<u16>) -> Vec<GLfloat> {
+        let mut positions: Vec<GLfloat> = Vec::with_capacity(indices.len() * 3);
         for i in 0..indices.len() {
-            positions.push(cgmath::Point3 {
-                x: base_positions[(indices[i] * 3) as usize],
-                y: base_positions[(indices[i] * 3 + 1) as usize],
-                z: base_positions[(indices[i] * 3 + 2) as usize],
-            });
+            positions.push(base_positions[(indices[i] * 3) as usize]);
+            positions.push(base_positions[(indices[i] * 3 + 1) as usize]);
+            positions.push(base_positions[(indices[i] * 3 + 2) as usize]);
         }
         positions
     }
 
-    /*
-    fn generate_normals(positions: &Vec<cgmath::Point3<f32>>) -> Vec<cgmath::Vector3<f32>> {
-        let mut normals: Vec<cgmath::Vector3<f32>> = Vec::new();
+    fn generate_normals(positions: &Vec<GLfloat>) -> Vec<GLfloat> {
+        let mut normals: Vec<GLfloat> = Vec::with_capacity(positions.len());
 
         let mut pos_iter = positions.iter().peekable();
         while pos_iter.peek().is_some() {
-            let mut pos_vecs: Vec<cgmath::Point3<f32>> = Vec::with_capacity(3);
+            let mut pos_vecs: Vec<Point3> = Vec::with_capacity(3);
 
             // There are 3 components for each point and 3 points to form a triangle.
             for _ in 0..3 {
-                pos_vecs.push(pos_iter.next().unwrap().clone());
+                pos_vecs.push(Point3 {
+                    x: pos_iter.next().unwrap().clone(),
+                    y: pos_iter.next().unwrap().clone(),
+                    z: pos_iter.next().unwrap().clone(),
+                });
             }
 
             let vec_diffs = [
-                pos_vecs[1].sub(pos_vecs[0]),
-                pos_vecs[2].sub(pos_vecs[0]),
+                pos_vecs[1] - pos_vecs[0],
+                pos_vecs[2] - pos_vecs[0],
             ];
             let normal = vec_diffs[0].cross(vec_diffs[1]);
 
             // Use the same normal for each point of a single triangle.
             for _ in 0..3 {
-                normals.push(normal);
+                normals.push(normal.x);
+                normals.push(normal.y);
+                normals.push(normal.z);
             }
         }
-
         normals
     }
-    */
 }
 
 impl Collide for CollidableCube {
@@ -170,6 +163,8 @@ impl Collide for CollidableCube {
 
 impl Render for CollidableCube {
     fn render(&mut self, context: &mut renderer::RenderingContext) {
+        // TODO: Replace the commented-out segments.
+        /*
         let params = glium::DrawParameters {
             depth: glium::Depth {
                 test: glium::draw_parameters::DepthTest::IfLess,
@@ -178,17 +173,30 @@ impl Render for CollidableCube {
             },
             .. Default::default()
         };
+        */
 
-        let model: [[f32; 4]; 4] = self.model_matrix().into();
-        let view: [[f32; 4]; 4] = context.camera.view_matrix().into();
-        let projection: [[f32; 4]; 4] = context.camera.projection_matrix().into();
-        let color: [f32; 3] = [0.2, 0.2, 1.0];
+//        let model: [[f32; 4]; 4] = self.model_matrix().into();
+//        let view: [[f32; 4]; 4] = context.camera.view_matrix().into();
+//        let projection: [[f32; 4]; 4] = context.camera.projection_matrix().into();
+//        let color: [f32; 3] = [0.2, 0.2, 1.0];
+
+        {
+            let mut uniforms = context.program.uniforms();
+            uniforms.send_matrix_4fv("model", self.model_matrix());
+            uniforms.send_matrix_4fv("view", context.camera.view_matrix());
+            uniforms.send_matrix_4fv("projection", context.camera.projection_matrix());
+            uniforms.send_3fv("color", Vector3::new(0.2, 0.2, 1.0));
+        }
+
+        context.draw(
+            &self.mesh,
+        );
+        /*
         let uniforms = uniform! {
             model: model,
             view: view,
             projection: projection,
             color: color,
-//            diffuse_tex: &self.diffuse_texture,
         };
 
         context.target.draw(
@@ -198,5 +206,6 @@ impl Render for CollidableCube {
             &uniforms,
             &params
         ).unwrap();
+        */
     }
 }

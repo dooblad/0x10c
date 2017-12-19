@@ -1,8 +1,8 @@
 pub mod camera;
 pub mod event_handler;
 
-use glium;
-use glium::glutin;
+use glutin;
+use graphics;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -24,7 +24,8 @@ impl Game {
             .with_dimensions(WINDOW_DIMENSIONS.0, WINDOW_DIMENSIONS.1)
             .with_title(WINDOW_TITLE);
         let context = glutin::ContextBuilder::new();
-        let display = glium::Display::new(window, context, &events_loop).unwrap();
+        // TODO: Update and add gl-rs initialization shit in Display constructor.
+        let display = graphics::Display::new(window, context, &events_loop).unwrap();
 
         {
             let gl_window = display.gl_window();
@@ -77,13 +78,13 @@ trait GameState {
     fn render(&mut self);
 }
 
-struct MainGameState {
+struct MainGameState<'a> {
     camera: camera::Camera,
-    world: world::World,
+    world: world::World<'a>,
 }
 
-impl MainGameState {
-    pub fn new(display: glium::Display) -> MainGameState {
+impl<'a> MainGameState<'a> {
+    pub fn new(display: graphics::Display) -> MainGameState {
         let camera = camera::Camera::new(WINDOW_DIMENSIONS.0, WINDOW_DIMENSIONS.1);
         let player = entity::player::Player::new();
         let world = world::World::new(player, display);
@@ -95,7 +96,7 @@ impl MainGameState {
     }
 }
 
-impl GameState for MainGameState {
+impl<'a> GameState for MainGameState<'a> {
     fn tick(&mut self, event_handler: &event_handler::EventHandler) {
         self.world.tick(event_handler);
     }

@@ -1,5 +1,4 @@
-use glium;
-use glium::glutin;
+use glutin;
 use std::collections::HashSet;
 
 pub struct EventHandler {
@@ -35,15 +34,15 @@ impl EventHandler {
         *mouse_delta = (0.0, 0.0);
 
         self.events_loop.poll_events(|event| {
-            use glium::glutin::Event::{Awakened, DeviceEvent, WindowEvent};
+            use glutin::Event::{Awakened, DeviceEvent, WindowEvent};
 
             match event {
                 WindowEvent { event, .. } => match event {
-                    glium::glutin::WindowEvent::Closed => *close_requested = true,
+                    glutin::WindowEvent::Closed => *close_requested = true,
                     _ => (),
                 },
                 DeviceEvent { event, .. } => {
-                    use glium::glutin::DeviceEvent::*;
+                    use glutin::DeviceEvent::*;
                     match event {
                         Added => (),
                         Removed => (),

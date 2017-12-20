@@ -7,18 +7,17 @@ use std::ffi::CString;
 use std::ptr;
 use std::str;
 
-use graphics::c_str_ptr;
 use graphics::mesh::AttribIndices;
 
 // TODO: Do some shit with macros like glium has with `uniform!`.
 
 pub struct ProgramUniforms {
-    program_id: u32,
+    program_id: GLuint,
     // TODO: Cache get_location calls?
 }
 
 impl ProgramUniforms {
-    pub fn new(program_id: u32) -> ProgramUniforms {
+    pub fn new(program_id: GLuint) -> ProgramUniforms {
         ProgramUniforms {
             program_id,
         }
@@ -27,7 +26,9 @@ impl ProgramUniforms {
     // TODO: Implement methods so that anything indexable can be used.
 
     pub fn get_location(&self, name: &str) -> GLint {
-        unsafe { gl::GetUniformLocation(self.program_id, name.as_ptr() as *const i8) }
+        unsafe {
+            gl::GetUniformLocation(self.program_id, CString::new(name).unwrap().as_ptr())
+        }
     }
 
     pub fn send_1f(&mut self, name: &str, data: GLfloat) {
@@ -265,11 +266,11 @@ impl ShaderProgram {
     fn setup_attrib_locs(program: GLuint) {
         unsafe {
             gl::BindAttribLocation(program, AttribIndices::Positions as u32,
-                                   c_str_ptr("position"));
+                                   CString::new("position").unwrap().as_ptr());
             gl::BindAttribLocation(program, AttribIndices::Normals as u32,
-                                   c_str_ptr("normal"));
+                                   CString::new("normal").unwrap().as_ptr());
             gl::BindAttribLocation(program, AttribIndices::TexCoords as u32,
-                                   c_str_ptr("tex_coord"));
+                                   CString::new("tex_coord").unwrap().as_ptr());
         }
     }
 }

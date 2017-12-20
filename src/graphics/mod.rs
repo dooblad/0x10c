@@ -1,20 +1,11 @@
 pub mod mesh;
 pub mod renderer;
 pub mod shader;
-pub mod test;
 pub mod texture;
 
 use gl;
 use glutin;
 use glutin::GlContext;
-use std::ffi::CString;
-use std::str;
-
-////////////////////////////////////////////////////////////////////////////////
-
-fn c_str_ptr(s: &str) -> *const i8 {
-    CString::new(s).unwrap().as_ptr()
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 

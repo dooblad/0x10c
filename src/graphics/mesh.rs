@@ -10,7 +10,7 @@ use graphics::renderer::RenderingContext;
 // TODO: Reference graphics/geom/mesh.cc from C++ code to get Mesh working.
 
 struct VertexArray {
-    pub vbo_id: u32,
+    pub vbo_id: GLuint,
     pub data: Vec<GLfloat>,
 }
 
@@ -24,7 +24,7 @@ pub enum AttribIndices {
 }
 
 pub struct Mesh {
-    vao_id: u32,
+    vao_id: GLuint,
     positions: VertexArray,
     normals: Option<VertexArray>,
     tex_coords: Option<VertexArray>,
@@ -84,7 +84,7 @@ impl Mesh {
         }
     }
 
-    pub fn move_to(&mut self, position: Point3<f32>) {
+    pub fn move_to(&mut self, position: Point3<GLfloat>) {
         // The rightmost column of a model matrix is where translation data is stored.
         self.model_matrix[3][0] = position[0];
         self.model_matrix[3][1] = position[1];
@@ -115,7 +115,18 @@ impl Mesh {
             uniforms.send_3fv("color", Vector3::new(0.2, 0.2, 1.0));
 
             // Draw.
-            gl::DrawArrays(gl::TRIANGLES, 0, self.positions.data.len() as GLsizei);
+            gl::DrawArrays(gl::TRIANGLES, 0, (self.positions.data.len() as GLsizei) / 3);
+
+            // Disable vertex attributes.
+            gl::DisableVertexAttribArray(AttribIndices::Positions as GLuint);
+            match self.normals {
+                Some(_) => gl::DisableVertexAttribArray(AttribIndices::Normals as GLuint),
+                None => (),
+            }
+            match self.tex_coords {
+                Some(_) => gl::DisableVertexAttribArray(AttribIndices::TexCoords as GLuint),
+                None => (),
+            }
 
             // Unbind.
             gl::BindVertexArray(0);

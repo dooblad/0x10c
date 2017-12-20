@@ -2,7 +2,6 @@ use game::camera;
 use graphics;
 use graphics::Render;
 use graphics::shader::{ShaderProgram, ShaderSource};
-use graphics::test;
 
 use ::read_file;
 
@@ -46,12 +45,11 @@ impl Renderer {
         self.program.bind();
 
         {
-            //let mut context = RenderingContext::new(&mut self.program, camera);
+            let mut context = RenderingContext::new(&mut self.program, camera);
 
-            //for renderable in renderables.iter_mut() {
-            //    renderable.render(&mut context);
-            //}
-            test::test(&self.program, camera);
+            for renderable in renderables.iter_mut() {
+                renderable.render(&mut context);
+            }
         }
 
         self.display.finish_frame();

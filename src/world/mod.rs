@@ -10,13 +10,13 @@ use util::collide::Collide;
 use util::math::Point3;
 use self::collidable_cube::CollidableCube;
 
-pub struct World<'a> {
+pub struct World {
     player: entity::player::Player,
     collidables: Vec<Box<Collide>>,
-    renderer: renderer::Renderer<'a>,
+    renderer: renderer::Renderer,
 }
 
-impl<'a> World<'a> {
+impl World {
     pub fn new(player: entity::player::Player, display: graphics::Display) -> World {
         let mut collidables: Vec<Box<Collide>> = Vec::new();
 

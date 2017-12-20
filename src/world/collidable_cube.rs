@@ -1,22 +1,16 @@
-use cgmath::SquareMatrix;
 use gl::types::GLfloat;
-//use image;
 use std::f32;
-//use std::io::Cursor;
 
-use graphics;
 use graphics::Render;
-use graphics::renderer;
+use graphics::mesh::Mesh;
+use graphics::renderer::RenderingContext;
 use util::collide::{AABB, Range};
 use util::collide::Collide;
-use util::math::{Matrix4, Point3, Vector3};
+use util::math::Point3;
 
 pub struct CollidableCube {
     aabb: AABB,
-//    velocity: Vector3,
-    model_matrix: Matrix4,
-    mesh: graphics::Mesh,
-//    diffuse_texture: graphics::Texture,
+    mesh: Mesh,
 }
 
 impl CollidableCube {
@@ -77,15 +71,9 @@ impl CollidableCube {
             tex_coords.push(base_tex_coords[i % base_tex_coords.len()]);
         }
 
-        let mesh = graphics::Mesh::new(positions, Some(normals), Some(tex_coords));
-
-        /*
-        let image = image::load(
-            Cursor::new(&include_bytes!("../../tuto-14-diffuse.jpg")[..]),
-            image::JPEG
-        ).unwrap().to_rgba();
-        let diffuse_texture = graphics::Texture::new(image);
-        */
+        let mut mesh = Mesh::new(positions, Some(normals), Some(tex_coords));
+        // TODO: If/when we add velocity, update the mesh's position as well.
+        mesh.move_to(position);
 
         let bounds = [
             Range { min: -s, max: s },
@@ -95,21 +83,8 @@ impl CollidableCube {
 
         CollidableCube {
             aabb: AABB::new(bounds, position),
-//            velocity,
-            model_matrix: Matrix4::identity(),
             mesh,
-//            diffuse_texture,
         }
-    }
-
-    fn model_matrix(&mut self) -> Matrix4 {
-        // The rightmost column of a model matrix is where translation data is stored.
-        let position = self.aabb.position();
-        self.model_matrix[3][0] = position[0];
-        self.model_matrix[3][1] = position[1];
-        self.model_matrix[3][2] = position[2];
-
-        self.model_matrix
     }
 
     fn expand_indices(base_positions: &Vec<GLfloat>, indices: &Vec<u16>) -> Vec<GLfloat> {
@@ -162,50 +137,7 @@ impl Collide for CollidableCube {
 }
 
 impl Render for CollidableCube {
-    fn render(&mut self, context: &mut renderer::RenderingContext) {
-        // TODO: Replace the commented-out segments.
-        /*
-        let params = glium::DrawParameters {
-            depth: glium::Depth {
-                test: glium::draw_parameters::DepthTest::IfLess,
-                write: true,
-                .. Default::default()
-            },
-            .. Default::default()
-        };
-        */
-
-//        let model: [[f32; 4]; 4] = self.model_matrix().into();
-//        let view: [[f32; 4]; 4] = context.camera.view_matrix().into();
-//        let projection: [[f32; 4]; 4] = context.camera.projection_matrix().into();
-//        let color: [f32; 3] = [0.2, 0.2, 1.0];
-
-        {
-            let mut uniforms = context.program.uniforms();
-            uniforms.send_matrix_4fv("model", self.model_matrix());
-            uniforms.send_matrix_4fv("view", context.camera.view_matrix());
-            uniforms.send_matrix_4fv("projection", context.camera.projection_matrix());
-            uniforms.send_3fv("color", Vector3::new(0.2, 0.2, 1.0));
-        }
-
-        context.draw(
-            &self.mesh,
-        );
-        /*
-        let uniforms = uniform! {
-            model: model,
-            view: view,
-            projection: projection,
-            color: color,
-        };
-
-        context.target.draw(
-            &self.vertex_buffer,
-            glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList),
-            &context.program,
-            &uniforms,
-            &params
-        ).unwrap();
-        */
+    fn render(&mut self, context: &mut RenderingContext) {
+        self.mesh.draw(context);
     }
 }

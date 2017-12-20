@@ -24,7 +24,6 @@ impl Game {
             .with_dimensions(WINDOW_DIMENSIONS.0, WINDOW_DIMENSIONS.1)
             .with_title(WINDOW_TITLE);
         let context = glutin::ContextBuilder::new();
-        // TODO: Update and add gl-rs initialization shit in Display constructor.
         let display = graphics::Display::new(window, context, &events_loop).unwrap();
 
         {
@@ -78,12 +77,12 @@ trait GameState {
     fn render(&mut self);
 }
 
-struct MainGameState<'a> {
+struct MainGameState {
     camera: camera::Camera,
-    world: world::World<'a>,
+    world: world::World,
 }
 
-impl<'a> MainGameState<'a> {
+impl MainGameState {
     pub fn new(display: graphics::Display) -> MainGameState {
         let camera = camera::Camera::new(WINDOW_DIMENSIONS.0, WINDOW_DIMENSIONS.1);
         let player = entity::player::Player::new();
@@ -96,7 +95,7 @@ impl<'a> MainGameState<'a> {
     }
 }
 
-impl<'a> GameState for MainGameState<'a> {
+impl GameState for MainGameState {
     fn tick(&mut self, event_handler: &event_handler::EventHandler) {
         self.world.tick(event_handler);
     }

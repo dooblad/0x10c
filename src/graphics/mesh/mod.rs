@@ -1,4 +1,6 @@
+pub mod rect;
 pub mod cube;
+mod util;
 
 use cgmath::SquareMatrix;
 use cgmath::{Point3, Vector3, Matrix4};

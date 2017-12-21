@@ -9,6 +9,7 @@ use game::camera;
 use util::collide::Collide;
 use util::math::Point3;
 use self::collidable::cube::Cube;
+use self::collidable::rect::Rect;
 
 pub struct World {
     player: entity::player::Player,
@@ -30,6 +31,12 @@ impl World {
                 z,
             })));
         }
+
+        collidables.push(Box::new(Rect::new(5.0, 1.0, 5.0, Point3 {
+            x: 0.0,
+            y: -10.0,
+            z: 0.0,
+        })));
 
         World {
             player,

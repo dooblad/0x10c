@@ -1,4 +1,4 @@
-pub mod collidable_cube;
+pub mod collidable;
 
 use entity;
 use entity::Entity;
@@ -8,7 +8,7 @@ use graphics::renderer;
 use game::camera;
 use util::collide::Collide;
 use util::math::Point3;
-use self::collidable_cube::CollidableCube;
+use self::collidable::cube::Cube;
 
 pub struct World {
     player: entity::player::Player,
@@ -24,7 +24,7 @@ impl World {
             let i_f = i as f32;
             let z = (1.1 * i_f * i_f) + 10.0;
             let size = i_f * 2.0;
-            collidables.push(Box::new(CollidableCube::new(size, Point3 {
+            collidables.push(Box::new(Cube::new(size, Point3 {
                 x: 0.0,
                 y: -15.0,
                 z,

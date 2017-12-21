@@ -2,6 +2,7 @@ use game::camera;
 use graphics;
 use graphics::Render;
 use graphics::shader::{ShaderProgram, ShaderSource};
+use util::math::Vector3;
 
 use ::read_file;
 
@@ -45,7 +46,25 @@ impl Renderer {
         self.program.bind();
 
         {
+            let uniforms = self.program.uniforms();
+
+            // TODO: Set up lights.
+            let camera_position = camera.position();
+            uniforms.send_3f("light_position",
+                             Vector3::new(
+                                 camera_position[0],
+                                 camera_position[1],
+                                 camera_position[2],
+                             ));
+
+            // Set up matrices.
+            uniforms.send_matrix_4fv("view_matrix", camera.view_matrix());
+            uniforms.send_matrix_4fv("projection_matrix", camera.projection_matrix());
+        }
+
+        {
             let mut context = RenderingContext::new(&mut self.program, camera);
+
 
             for renderable in renderables.iter_mut() {
                 renderable.render(&mut context);

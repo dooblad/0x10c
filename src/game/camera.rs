@@ -5,15 +5,16 @@ use std;
 use util::math::{Matrix4, Point3, Rotation, Vector3};
 
 pub struct Camera {
-    pub view_matrix: Matrix4,
-    pub projection_matrix: Matrix4,
-    pub position: Point3,
-    pub rotation: Rotation,
+    view_matrix: Matrix4,
+    projection_matrix: Matrix4,
+    position: Point3,
+    rotation: Rotation,
 }
 
 impl Camera {
-    // TODO: This operates under the assumption that the window size never changes.  Make it update
-    // by checking for a window resize event and calling a `set_window_size` method here.
+    // TODO: This operates under the assumption that the window size never changes.
+    // Make it update by checking for a window resize event and calling a
+    // `set_window_size` method here.
     pub fn new(width: u32, height: u32) -> Camera {
         let fov: f32 = std::f32::consts::PI / 3.0;
         let aspect_ratio = width as f32 / height as f32;
@@ -118,6 +119,10 @@ pub fn tick(&mut self, event_handler: &event_handler::EventHandler) {
         let up = right.cross(facing_dir).normalize();
 
         (facing_dir, right, up)
+    }
+
+    pub fn position(&self) -> Point3 {
+        self.position
     }
 
     pub fn view_matrix(&self) -> Matrix4 {

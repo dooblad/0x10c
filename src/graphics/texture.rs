@@ -1,6 +1,8 @@
 use gl;
 use gl::types::*;
 use image;
+use std::fs::File;
+use std::io::BufReader;
 use std::mem;
 
 pub struct Texture {
@@ -29,5 +31,15 @@ impl Texture {
 
     pub fn bind(&self) {
         unsafe { gl::BindTexture(gl::TEXTURE_2D, self.id); }
+    }
+}
+
+impl<'a> From<&'a str> for Texture {
+    fn from(file_name: &str) -> Self {
+        let image = image::load(
+            BufReader::new(File::open(file_name).unwrap()),
+            image::JPEG,
+        ).unwrap().to_rgba();
+        Texture::new(image)
     }
 }

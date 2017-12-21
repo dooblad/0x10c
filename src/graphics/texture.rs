@@ -5,6 +5,8 @@ use std::fs::File;
 use std::io::BufReader;
 use std::mem;
 
+use graphics::shader::ProgramUniforms;
+
 pub struct Texture {
     id: u32,
 }
@@ -29,8 +31,15 @@ impl Texture {
         }
     }
 
-    pub fn bind(&self) {
-        unsafe { gl::BindTexture(gl::TEXTURE_2D, self.id); }
+    pub fn bind_and_send(&self, uniform_name: &str, uniforms: &mut ProgramUniforms) {
+        unsafe {
+            // TODO: Make this class not just for diffuse textures.
+            // Use 0th texture unit for diffuse textures by convention.
+            gl::ActiveTexture(gl::TEXTURE0);
+            gl::BindTexture(gl::TEXTURE_2D, self.id);
+            uniforms.send_1i("use_texture", 1);
+            uniforms.send_1i(uniform_name, 0);
+        }
     }
 }
 

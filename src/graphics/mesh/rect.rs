@@ -1,5 +1,6 @@
 use graphics::mesh::Mesh;
 use graphics::mesh::util::*;
+use graphics::texture::Texture;
 
 pub fn new(width: f32, height: f32, depth: f32) -> Mesh {
     assert!(width > 0.0);
@@ -62,5 +63,8 @@ pub fn new(width: f32, height: f32, depth: f32) -> Mesh {
         tex_coords.push(base_tex_coords[i % base_tex_coords.len()]);
     }
 
-    Mesh::new(positions, Some(normals), Some(tex_coords))
+//    let diffuse_texture = Texture::from("res/rocks_diffuse.jpg");
+
+//    Mesh::new(positions, Some(normals), Some(tex_coords), Some(diffuse_texture))
+    Mesh::new(positions, Some(normals), None, None)
 }

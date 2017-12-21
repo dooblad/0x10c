@@ -79,8 +79,8 @@ impl ProgramUniforms {
         unsafe { gl::Uniform4ui(self.get_location(name), data[0], data[1], data[2], data[3]); }
     }
 
-    pub fn send_1fv(&mut self, name: &str, data: Vector1<GLfloat>) {
-        unsafe { gl::Uniform1fv(self.get_location(name), 1, data.as_ptr()); }
+    pub fn send_1fv(&mut self, name: &str, data: GLfloat) {
+        unsafe { gl::Uniform1fv(self.get_location(name), 1, Vector1::new(data).as_ptr()); }
     }
 
     pub fn send_2fv(&mut self, name: &str, data: Vector2<GLfloat>) {

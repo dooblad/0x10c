@@ -39,7 +39,10 @@ impl Display {
 
         gl::load_with(|symbol| gl_window.get_proc_address(symbol) as *const _);
 
-        // TODO: gl::CullFace(gl::BACK);
+        unsafe{
+            gl::Enable(gl::DEPTH_TEST);
+            gl::CullFace(gl::BACK);
+        }
 
         Some(Display {
             gl_window,

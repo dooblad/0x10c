@@ -41,7 +41,8 @@ pub struct Mesh {
 impl Mesh {
     pub fn new(positions: Vec<GLfloat>,
                normals: Option<Vec<GLfloat>>,
-               tex_coords: Option<Vec<GLfloat>>) -> Mesh {
+               tex_coords: Option<Vec<GLfloat>>,
+               diffuse_texture: Option<Texture>) -> Mesh {
         let mut vao_id = 0;
 
         let p;
@@ -79,7 +80,7 @@ impl Mesh {
             normals: n,
             tex_coords: t,
             model_matrix: Matrix4::identity(),
-            diffuse_texture: None,
+            diffuse_texture,
         }
     }
 
@@ -109,25 +110,32 @@ impl Mesh {
 
 impl Render for Mesh {
     fn render(&mut self, context: &mut RenderingContext) {
+        let mut uniforms = context.program.uniforms();
+
         unsafe {
             // Bind.
             gl::BindVertexArray(self.vao_id);
 
             // Enable vertex attributes.
             gl::EnableVertexAttribArray(AttribIndices::Positions as GLuint);
-            match self.normals {
-                Some(_) => gl::EnableVertexAttribArray(AttribIndices::Normals as GLuint),
-                None => (),
+            if let Some(_) = self.normals {
+                gl::EnableVertexAttribArray(AttribIndices::Normals as GLuint);
             }
-            match self.tex_coords {
-                Some(_) => gl::EnableVertexAttribArray(AttribIndices::TexCoords as GLuint),
-                None => (),
+            if let Some(_) = self.tex_coords {
+                gl::EnableVertexAttribArray(AttribIndices::TexCoords as GLuint);
             }
 
-            // Set uniforms.
-            let mut uniforms = context.program.uniforms();
+            // Setup texturing.
+            if let Some(ref dt) = self.diffuse_texture {
+                dt.bind_and_send("diffuse_texture", uniforms);
+            } else {
+                // If no texture, just use a flat color.
+                uniforms.send_1i("use_texture", 0);
+                uniforms.send_3fv("diffuse_color", Vector3::new(0.7, 0.7, 0.7));
+            }
+
+            // Set model matrix.
             uniforms.send_matrix_4fv("model_matrix", self.model_matrix);
-            uniforms.send_3fv("diffuse_color", Vector3::new(0.2, 0.2, 1.0));
 
             // Draw.
             gl::DrawArrays(gl::TRIANGLES, 0, (self.positions.data.len() as GLsizei) / 3);

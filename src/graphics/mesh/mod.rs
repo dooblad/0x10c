@@ -131,7 +131,7 @@ impl Render for Mesh {
             } else {
                 // If no texture, just use a flat color.
                 uniforms.send_1i("use_texture", 0);
-                uniforms.send_3fv("diffuse_color", Vector3::new(0.7, 0.7, 0.7));
+                uniforms.send_3fv("diffuse_color", Vector3::new(0.5, 0.5, 0.5));
             }
 
             // Set model matrix.

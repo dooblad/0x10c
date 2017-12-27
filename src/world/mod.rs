@@ -21,21 +21,55 @@ impl World {
     pub fn new(player: entity::player::Player, display: graphics::Display) -> World {
         let mut collidables: Vec<Box<Collide>> = Vec::new();
 
-        for i in 1..10 {
-            let i_f = i as f32;
-            let z = (1.1 * i_f * i_f) + 10.0;
-            let size = i_f * 2.0;
-            collidables.push(Box::new(Cube::new(size, Point3 {
-                x: 0.0,
-                y: -15.0,
-                z,
-            })));
-        }
+        collidables.push(Box::new(Cube::new(2.0, Point3 {
+            x: -2.0,
+            y: 0.0,
+            z: 10.0,
+        })));
+        collidables.push(Box::new(Cube::new(4.0, Point3 {
+            x: 3.0,
+            y: 0.0,
+            z: 10.0,
+        })));
 
         collidables.push(Box::new(Rect::new(5.0, 1.0, 5.0, Point3 {
+            x: 12.0,
+            y: 3.0,
+            z: 10.0,
+        })));
+
+        // Floor
+        collidables.push(Box::new(Rect::new(50.0, 1.0, 50.0, Point3 {
             x: 0.0,
-            y: -10.0,
+            y: -0.5,
             z: 0.0,
+        })));
+        // Ceiling
+        collidables.push(Box::new(Rect::new(50.0, 1.0, 50.0, Point3 {
+            x: 0.0,
+            y: 25.0,
+            z: 0.0,
+        })));
+        // Walls
+        collidables.push(Box::new(Rect::new(1.0, 25.0, 50.0, Point3 {
+            x: -25.0,
+            y: 12.5,
+            z: 0.0,
+        })));
+        collidables.push(Box::new(Rect::new(1.0, 25.0, 50.0, Point3 {
+            x: 25.0,
+            y: 12.5,
+            z: 0.0,
+        })));
+        collidables.push(Box::new(Rect::new(50.0, 25.0, 1.0, Point3 {
+            x: 0.0,
+            y: 12.5,
+            z: 25.0,
+        })));
+        collidables.push(Box::new(Rect::new(50.0, 25.0, 1.0, Point3 {
+            x: 0.0,
+            y: 12.5,
+            z: -25.0,
         })));
 
         World {

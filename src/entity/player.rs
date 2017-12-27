@@ -14,14 +14,14 @@ use util::collide::Collide;
 
 const PLAYER_BOUNDS: [Range; 3] = [
     Range { min: -1.0, max: 1.0 },
-    Range { min: -2.0, max: 0.5 },
+    Range { min: -3.0, max: 0.5 },
     Range { min: -1.0, max: 1.0 },
 ];
 
 const MOVE_SPEED: f32 = 0.04;
 const JUMP_SPEED: f32 = 0.35;
 const ROTATION_SPEED: f32 = 0.1;
-const GRAVITY: f32 = 0.01;
+const GRAVITY: f32 = 0.02;
 const VELOCITY_DAMPENING_FACTOR: f32 = 0.8;
 
 pub struct Player {

@@ -7,6 +7,7 @@ extern crate rand;
 use std::fs::File;
 use std::io::Read;
 
+pub mod dcpu;
 pub mod entity;
 pub mod game;
 pub mod graphics;

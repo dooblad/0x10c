@@ -32,3 +32,7 @@ impl Instruction {
         self.op.eval(b_val, a_val, dcpu);
     }
 }
+
+pub fn make_instruction_bits(a_code: u16, b_code: u16, op_code: u16) -> u16 {
+    (a_code << 10) | (b_code << 5) | op_code
+}

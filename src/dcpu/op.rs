@@ -60,9 +60,9 @@ impl Op {
                 0x01 => JSR,
                 0x08 => INT,
                 0x09 => IAG,
-                0x0a => IAS,
-                0x0b => RFI,
-                0x0c => IAQ,
+                0x0A => IAS,
+                0x0B => RFI,
+                0x0C => IAQ,
                 0x10 => HWN,
                 0x11 => HWQ,
                 0x12 => HWI,
@@ -104,6 +104,48 @@ impl Op {
         }
     }
 
+    pub fn op_code(&self) -> u16 {
+        use self::Op::*;
+        match *self {
+            SET => 0x01,
+            ADD => 0x02,
+            SUB => 0x03,
+            MUL => 0x04,
+            MLI => 0x05,
+            DIV => 0x06,
+            DVI => 0x07,
+            MOD => 0x08,
+            MDI => 0x09,
+            AND => 0x0A,
+            BOR => 0x0B,
+            XOR => 0x0C,
+            SHR => 0x0D,
+            ASR => 0x0E,
+            SHL => 0x0F,
+            IFB => 0x10,
+            IFC => 0x11,
+            IFE => 0x12,
+            IFN => 0x13,
+            IFG => 0x14,
+            IFA => 0x15,
+            IFL => 0x16,
+            IFU => 0x17,
+            ADX => 0x1A,
+            SBX => 0x1B,
+            STI => 0x1E,
+            STD => 0x1F,
+            JSR => 0x01,
+            INT => 0x08,
+            IAG => 0x09,
+            IAS => 0x0A,
+            RFI => 0x0B,
+            IAQ => 0x0C,
+            HWN => 0x10,
+            HWQ => 0x11,
+            HWI => 0x12,
+        }
+    }
+
     fn set(lhs: ValKind, rhs: u16, dcpu: &mut Dcpu) {
         use self::ValKind::*;
         match lhs {
@@ -118,7 +160,9 @@ impl Op {
         use self::Op::*;
         use self::OpResult::*;
         use dcpu::val_type::ValKind::*;
-        use dcpu::Register;
+        use dcpu::register::Register;
+
+        // TODO: Add support for setting the PC.
 
         // Once ValKind's have been extracted, evaluation order of `a` and `b` doesn't
         // matter, and they can be evaluated multiple times.

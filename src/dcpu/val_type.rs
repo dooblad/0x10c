@@ -46,6 +46,24 @@ impl ValType {
         }
     }
 
+    pub fn val_code(&self) -> u16 {
+        use self::ValType::*;
+        match *self {
+            Register(r) => r,
+            RegisterDeref(r) => r + 0x8,
+            RegisterNextWordDeref(r) => r + 0x10,
+            Push | Pop => 0x18,
+            Peek => 0x19,
+            Pick => 0x1A,
+            StackPointer => 0x1B,
+            ProgramCounter => 0x1C,
+            Extra => 0x1D,
+            NextWordDeref => 0x1E,
+            NextWord => 0x1F,
+            Literal(v) => v + 0x21,
+        }
+    }
+
     pub fn eval(&self, dcpu: &mut Dcpu) -> ValKind {
         use self::ValType::*;
         use self::ValKind;

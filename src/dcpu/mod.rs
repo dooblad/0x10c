@@ -1,3 +1,4 @@
+pub mod assembler;
 pub mod instruction;
 pub mod op;
 pub mod val_type;
@@ -13,15 +14,68 @@ const STACK_START: u16 = 0xFFFF;
 
 //const MAX_NUM_DEVICES: u16 = 65535;
 
-pub enum Register {
-    A = 0x0,
-    B = 0x1,
-    C = 0x2,
-    X = 0x3,
-    Y = 0x4,
-    Z = 0x5,
-    I = 0x6,
-    J = 0x7,
+pub mod register {
+    pub enum Register {
+        A = 0x0,
+        B = 0x1,
+        C = 0x2,
+        X = 0x3,
+        Y = 0x4,
+        Z = 0x5,
+        I = 0x6,
+        J = 0x7,
+    }
+
+    // TODO: Use TryFrom trait.
+    pub fn try_from(token: &str) -> Option<Register> {
+        use self::Register::*;
+        match token {
+            "A" => Some(A),
+            "B" => Some(B),
+            "C" => Some(C),
+            "X" => Some(X),
+            "Y" => Some(Y),
+            "Z" => Some(Z),
+            "I" => Some(I),
+            "J" => Some(J),
+            _ => None,
+        }
+    }
+}
+
+pub mod literal {
+    pub fn try_from(token: &str, line_num: usize) -> Result<u16,String> {
+        // First try decimal.
+        let mut result = match u16::from_str_radix(token, 10) {
+            Ok(v) => Some(v),
+            Err(_) => None,
+        };
+
+        // Then try hex if decimal fails.
+        if let None = result {
+            if token.len() > 2 {
+                // Strip off the "0x" prefix.
+                result = match u16::from_str_radix(&token[2..], 16) {
+                    Ok(v) => Some(v),
+                    Err(_) => return Err(
+                        format!("Line {}: Failed to parse literal from \"{}\"",
+                                line_num, token))
+                };
+            }
+        }
+
+        match result {
+            Some(v) => {
+                if v <= u16::max_value() {
+                    Ok(v)
+                } else {
+                    Err(format!("Line {}: Literal \"{}\" too large", line_num, v))
+                }
+            },
+            None => Err(format!("Line {}: Failed to parse literal from \"{}\"",
+                                line_num, token)),
+        }
+    }
 }
 
 pub struct Dcpu {
@@ -126,17 +180,12 @@ mod tests {
 
     #[test]
     fn simple() {
-        // Literal 28
-        let a_val = 0x3D;
-        // Register A
-        let b_val = 0x0;
-        // SET operation
-        let op_code = 0x01;
-
-        Instruction::new(make_instruction_bits(a_val, b_val, op_code));
-    }
-
-    fn make_instruction_bits(a_val: u16, b_val: u16, op_code: u16) -> u16 {
-        (a_val << 10) | (b_val << 5) | op_code
+        // TODO: Load program into DCPU.
+        let program_src = "\
+; Test that comments work.
+SET A, 0x30 ; Test that comments work on the same line as code.
+        ";
+        let program = assembler::assemble(program_src);
+        println!("Program: {:?}", program);
     }
 }

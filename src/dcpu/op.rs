@@ -1,3 +1,5 @@
+use std::fmt;
+
 use dcpu::Dcpu;
 use dcpu::val_type::ValKind;
 
@@ -7,6 +9,7 @@ pub enum OpResult {
     SkipNextInstr,
 }
 
+#[derive(Debug)]
 pub enum Op {
     // Basic Ops
     SET,
@@ -60,13 +63,13 @@ impl Op {
                 0x01 => JSR,
                 0x08 => INT,
                 0x09 => IAG,
-                0x0A => IAS,
-                0x0B => RFI,
-                0x0C => IAQ,
+                0x0a => IAS,
+                0x0b => RFI,
+                0x0c => IAQ,
                 0x10 => HWN,
                 0x11 => HWQ,
                 0x12 => HWI,
-                _ => panic!("Unknown special opcode \"{}\"", format!("{:#X}", op_code)),
+                _ => panic!("Unknown special opcode \"{}\"", format!("{:#x}", op_code)),
             }
         } else {
             // Regular Instructions
@@ -81,12 +84,12 @@ impl Op {
                 0x07 => DVI,
                 0x08 => MOD,
                 0x09 => MDI,
-                0x0A => AND,
-                0x0B => BOR,
-                0x0C => XOR,
-                0x0D => SHR,
-                0x0E => ASR,
-                0x0F => SHL,
+                0x0a => AND,
+                0x0b => BOR,
+                0x0c => XOR,
+                0x0d => SHR,
+                0x0e => ASR,
+                0x0f => SHL,
                 0x10 => IFB,
                 0x11 => IFC,
                 0x12 => IFE,
@@ -95,11 +98,11 @@ impl Op {
                 0x15 => IFA,
                 0x16 => IFL,
                 0x17 => IFU,
-                0x1A => ADX,
-                0x1B => SBX,
-                0x1E => STI,
-                0x1F => STD,
-                _ => panic!("Unknown opcode \"{}\"", format!("{:#X}", op_code)),
+                0x1a => ADX,
+                0x1b => SBX,
+                0x1e => STI,
+                0x1f => STD,
+                _ => panic!("Unknown opcode \"{}\"", format!("{:#x}", op_code)),
             }
         }
     }
@@ -116,12 +119,12 @@ impl Op {
             DVI => 0x07,
             MOD => 0x08,
             MDI => 0x09,
-            AND => 0x0A,
-            BOR => 0x0B,
-            XOR => 0x0C,
-            SHR => 0x0D,
-            ASR => 0x0E,
-            SHL => 0x0F,
+            AND => 0x0a,
+            BOR => 0x0b,
+            XOR => 0x0c,
+            SHR => 0x0d,
+            ASR => 0x0e,
+            SHL => 0x0f,
             IFB => 0x10,
             IFC => 0x11,
             IFE => 0x12,
@@ -130,16 +133,16 @@ impl Op {
             IFA => 0x15,
             IFL => 0x16,
             IFU => 0x17,
-            ADX => 0x1A,
-            SBX => 0x1B,
-            STI => 0x1E,
-            STD => 0x1F,
+            ADX => 0x1a,
+            SBX => 0x1b,
+            STI => 0x1e,
+            STD => 0x1f,
             JSR => 0x01,
             INT => 0x08,
             IAG => 0x09,
-            IAS => 0x0A,
-            RFI => 0x0B,
-            IAQ => 0x0C,
+            IAS => 0x0a,
+            RFI => 0x0b,
+            IAQ => 0x0c,
             HWN => 0x10,
             HWQ => 0x11,
             HWI => 0x12,
@@ -149,9 +152,10 @@ impl Op {
     fn set(lhs: ValKind, rhs: u16, dcpu: &mut Dcpu) {
         use self::ValKind::*;
         match lhs {
-            // TODO: This is supposed to silently fail.
-            Literal(_) => panic!("Can't assign to literal value."),
+            // Silently fail when assigning to a literal.
+            Literal(_) => (),
             Register(v) => dcpu.set_reg(v, rhs),
+            ProgramCounter => dcpu.set_pc(rhs),
             Deref(v) => dcpu.set_mem(v, rhs),
         }
     }
@@ -160,20 +164,20 @@ impl Op {
         use self::Op::*;
         use self::OpResult::*;
         use dcpu::val_type::ValKind::*;
-        use dcpu::register::Register;
-
-        // TODO: Add support for setting the PC.
+        use dcpu::register;
 
         // Once ValKind's have been extracted, evaluation order of `a` and `b` doesn't
         // matter, and they can be evaluated multiple times.
         let a_val = match a_kind {
             Literal(v) => v,
             Register(v) => dcpu.reg(v),
+            ProgramCounter => dcpu.pc(),
             Deref(v) => dcpu.mem(v),
         };
         let b_val = match b_kind {
             Literal(v) => v,
             Register(v) => dcpu.reg(v),
+            ProgramCounter => dcpu.pc(),
             Deref(v) => dcpu.mem(v),
         };
 
@@ -199,7 +203,7 @@ impl Op {
                 let underflow_check = b_val as u32 - a_val as u32;
                 if (result as u32) < underflow_check {
                     // There was an underflow.
-                    dcpu.set_ex(0xFFFF);
+                    dcpu.set_ex(0xffff);
                 } else {
                     dcpu.set_ex(0x0);
                 }
@@ -208,14 +212,14 @@ impl Op {
             },
             MUL => {
                 let result = b_val * a_val;
-                let ex_val = (((b_val as u32 * a_val as u32) >> 16) & 0xFFFF) as u16;
+                let ex_val = (((b_val as u32 * a_val as u32) >> 16) & 0xffff) as u16;
                 dcpu.set_ex(ex_val);
                 Self::set(b_kind, result, dcpu);
                 NextInstr
             },
             MLI => {
                 let result = (b_val as i16 * a_val as i16) as u16;
-                let ex_val = (((b_val as i32 * a_val as i32) >> 16) & 0xFFFF) as u16;
+                let ex_val = (((b_val as i32 * a_val as i32) >> 16) & 0xffff) as u16;
                 dcpu.set_ex(ex_val);
                 Self::set(b_kind, result, dcpu);
                 NextInstr
@@ -226,7 +230,7 @@ impl Op {
                     Self::set(b_kind, 0, dcpu);
                 } else {
                     let result = b_val / a_val;
-                    let ex_val = (((b_val as u32) << 16) / a_val as u32) & 0xFFFF;
+                    let ex_val = (((b_val as u32) << 16) / a_val as u32) & 0xffff;
                     let ex_val = ex_val as u16;
                     dcpu.set_ex(ex_val);
                     Self::set(b_kind, result, dcpu);
@@ -239,7 +243,7 @@ impl Op {
                     Self::set(b_kind, 0, dcpu);
                 } else {
                     let result = (b_val as i16 / a_val as i16) as u16;
-                    let ex_val = (((b_val as i32) << 16) / a_val as i32) & 0xFFFF;
+                    let ex_val = (((b_val as i32) << 16) / a_val as i32) & 0xffff;
                     let ex_val = ex_val as u16;
                     dcpu.set_ex(ex_val);
                     Self::set(b_kind, result, dcpu);
@@ -276,21 +280,21 @@ impl Op {
             },
             SHR => {
                 let result = b_val >> a_val;
-                let ex_val = ((((b_val as u32) << 16) >> (a_val as u32)) & 0xFFFF) as u16;
+                let ex_val = ((((b_val as u32) << 16) >> (a_val as u32)) & 0xffff) as u16;
                 dcpu.set_ex(ex_val);
                 Self::set(b_kind, result, dcpu);
                 NextInstr
             },
             ASR => {
                 let result = ((b_val as i16) >> (a_val as i16)) as u16;
-                let ex_val = ((((b_val as u32) << 16) >> (a_val as u32)) & 0xFFFF) as u16;
+                let ex_val = ((((b_val as u32) << 16) >> (a_val as u32)) & 0xffff) as u16;
                 dcpu.set_ex(ex_val);
                 Self::set(b_kind, result, dcpu);
                 NextInstr
             },
             SHL => {
                 let result = b_val << a_val;
-                let ex_val = ((((b_val as u32) << (a_val as u32)) >> 16) & 0xFFFF) as u16;
+                let ex_val = ((((b_val as u32) << (a_val as u32)) >> 16) & 0xffff) as u16;
                 dcpu.set_ex(ex_val);
                 Self::set(b_kind, result, dcpu);
                 NextInstr
@@ -370,7 +374,7 @@ impl Op {
                 let underflow_check = b_val as u32 - a_val as u32 + ex as u32;
                 if (result as u32) < underflow_check {
                     // There was an underflow.
-                    dcpu.set_ex(0xFFFF);
+                    dcpu.set_ex(0xffff);
                 } else {
                     dcpu.set_ex(0x0);
                 }
@@ -379,18 +383,18 @@ impl Op {
             },
             STI => {
                 Self::set(b_kind, a_val, dcpu);
-                let i_reg = dcpu.reg(Register::I as u16);
-                dcpu.set_reg(Register::I as u16, i_reg + 1);
-                let j_reg = dcpu.reg(Register::J as u16);
-                dcpu.set_reg(Register::J as u16, j_reg + 1);
+                let i_reg = dcpu.reg(register::Register::I as u16);
+                dcpu.set_reg(register::Register::I as u16, i_reg + 1);
+                let j_reg = dcpu.reg(register::Register::J as u16);
+                dcpu.set_reg(register::Register::J as u16, j_reg + 1);
                 NextInstr
             },
             STD => {
                 Self::set(b_kind, a_val, dcpu);
-                let i_reg = dcpu.reg(Register::I as u16);
-                dcpu.set_reg(Register::I as u16, i_reg - 1);
-                let j_reg = dcpu.reg(Register::J as u16);
-                dcpu.set_reg(Register::J as u16, j_reg - 1);
+                let i_reg = dcpu.reg(register::Register::I as u16);
+                dcpu.set_reg(register::Register::I as u16, i_reg - 1);
+                let j_reg = dcpu.reg(register::Register::J as u16);
+                dcpu.set_reg(register::Register::J as u16, j_reg - 1);
                 NextInstr
             },
             JSR => {
@@ -478,13 +482,17 @@ impl Op {
             IAQ => 2,
             HWN => 2,
             HWQ => 4,
-            // TODO: This one is labeled 4+ in the DCPU spec for some reason.
             HWI => 4,
         }
     }
 }
 
-// TODO: Use TryFrom trait.
+impl fmt::Display for Op {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", *self)
+    }
+}
+
 pub fn try_from(op_name: &str) -> Option<Op> {
     use self::Op::*;
     match op_name {

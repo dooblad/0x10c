@@ -1,5 +1,7 @@
+use std::fmt;
+
 use dcpu::Dcpu;
-use dcpu::op::Op;
+use dcpu::op::{Op, OpResult};
 use dcpu::val_type::ValType;
 
 pub enum ValSize {
@@ -25,11 +27,33 @@ impl Instruction {
         }
     }
 
-    pub fn eval(&self, dcpu: &mut Dcpu) {
+    pub fn eval(&self, dcpu: &mut Dcpu) -> OpResult {
         // Always evaluate `b` before `a`.
         let b_val = self.b.eval(dcpu);
         let a_val = self.a.eval(dcpu);
-        self.op.eval(b_val, a_val, dcpu);
+        self.op.eval(b_val, a_val, dcpu)
+    }
+
+    pub fn num_words(&self) -> u16 {
+        use self::ValType::*;
+
+        // Must be at least 1 word long.
+        let mut result = 1;
+        result += match self.a {
+            RegisterNextWordDeref(_) | NextWordDeref | NextWord => 1,
+            _ => 0,
+        };
+        result += match self.b {
+            RegisterNextWordDeref(_) | NextWordDeref | NextWord => 1,
+            _ => 0,
+        };
+        result
+    }
+}
+
+impl fmt::Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {}, {}", self.op, self.b, self.a)
     }
 }
 

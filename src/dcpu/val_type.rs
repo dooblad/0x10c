@@ -1,3 +1,5 @@
+use std::fmt;
+
 use dcpu::Dcpu;
 use dcpu::instruction::ValSize;
 
@@ -20,6 +22,7 @@ pub enum ValType {
 pub enum ValKind {
     Literal(u16),
     Register(u16),
+    ProgramCounter,
     Deref(u16),
 }
 
@@ -28,21 +31,22 @@ impl ValType {
         use self::ValType::*;
         match val_code {
             0x00...0x07 => Register(val_code),
-            0x08...0x0F => RegisterDeref(val_code - 0x8),
+            0x08...0x0f => RegisterDeref(val_code - 0x8),
             0x10...0x17 => RegisterNextWordDeref(val_code - 0x10),
             0x18 => match val_size {
                 ValSize::A => Pop,
                 ValSize::B => Push,
             },
             0x19 => Peek,
-            0x1A => Pick,
-            0x1B => StackPointer,
-            0x1C => ProgramCounter,
-            0x1D => Extra,
-            0x1E => NextWordDeref,
-            0x1F => NextWord,
-            0x20...0x3F => Literal(val_code - 0x21),  // Map to range [-1, 30].
-            _ => panic!("Invalid value specifier \"{}\"", format!("{:#X}", val_code)),
+            0x1a => Pick,
+            0x1b => StackPointer,
+            0x1c => ProgramCounter,
+            0x1d => Extra,
+            0x1e => NextWordDeref,
+            0x1f => NextWord,
+            // Map to range [-1, 30].
+            0x20...0x3f => Literal(((val_code as i16) - 0x21) as u16),
+            _ => panic!("Invalid value specifier \"{}\"", format!("{:#x}", val_code)),
         }
     }
 
@@ -54,13 +58,13 @@ impl ValType {
             RegisterNextWordDeref(r) => r + 0x10,
             Push | Pop => 0x18,
             Peek => 0x19,
-            Pick => 0x1A,
-            StackPointer => 0x1B,
-            ProgramCounter => 0x1C,
-            Extra => 0x1D,
-            NextWordDeref => 0x1E,
-            NextWord => 0x1F,
-            Literal(v) => v + 0x21,
+            Pick => 0x1a,
+            StackPointer => 0x1b,
+            ProgramCounter => 0x1c,
+            Extra => 0x1d,
+            NextWordDeref => 0x1e,
+            NextWord => 0x1f,
+            Literal(v) => ((v as i16) + 0x21) as u16,
         }
     }
 
@@ -91,7 +95,7 @@ impl ValType {
                 ValKind::Deref(mem_index)
             },
             StackPointer => ValKind::Literal(dcpu.sp()),
-            ProgramCounter => ValKind::Literal(dcpu.pc()),
+            ProgramCounter => ValKind::ProgramCounter,
             Extra => ValKind::Literal(dcpu.ex()),
             NextWordDeref => {
                 let mem_index = dcpu.mem(dcpu.pc());
@@ -125,5 +129,29 @@ impl ValType {
             NextWord => 1,
             Literal(_) => 0,
         }
+    }
+}
+
+impl fmt::Display for ValType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::ValType::*;
+        // TODO: Should we be able to get this info from the enum?
+        let registers = ["A", "B", "C", "X", "Y", "Z", "I", "J"];
+        let result = match *self {
+            Register(r) => String::from(registers[r as usize]),
+            RegisterDeref(r) => format!("[{}]", registers[r as usize]),
+            RegisterNextWordDeref(r) => format!("[<next word>+{}]", registers[r as usize]),
+            Push => String::from("PUSH"),
+            Pop => String::from("POP"),
+            Peek => String::from("PEEK"),
+            Pick => String::from("PICK"),
+            StackPointer => String::from("SP"),
+            ProgramCounter => String::from("PC"),
+            Extra => String::from("EX"),
+            NextWordDeref => String::from("[<next word>]"),
+            NextWord => String::from("<next word>"),
+            Literal(v) => format!("{:#x}", v),
+        };
+        write!(f, "{}", result)
     }
 }

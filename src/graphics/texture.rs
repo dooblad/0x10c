@@ -43,6 +43,12 @@ impl Texture {
     }
 }
 
+impl Drop for Texture {
+    fn drop(&mut self) {
+        unsafe { gl::DeleteTextures(1, &self.id); }
+    }
+}
+
 impl<'a> From<&'a str> for Texture {
     fn from(file_name: &str) -> Self {
         let image = image::load(

@@ -1,8 +1,8 @@
 use std::fmt;
 
-use dcpu::Dcpu;
-use dcpu::op::{Op, OpResult};
-use dcpu::val_type::ValType;
+use super::Dcpu;
+use super::op::{Op, OpResult};
+use super::val_type::ValType;
 
 pub enum ValSize {
     A,  // 6 bits

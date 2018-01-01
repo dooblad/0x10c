@@ -1,7 +1,7 @@
 use std::fmt;
 
-use dcpu::Dcpu;
-use dcpu::val_type::ValKind;
+use super::Dcpu;
+use super::val_type::ValKind;
 
 /// Tells whether to skip the next instruction or not.
 pub enum OpResult {
@@ -163,8 +163,8 @@ impl Op {
     pub fn eval(&self, b_kind: ValKind, a_kind: ValKind, dcpu: &mut Dcpu) -> OpResult {
         use self::Op::*;
         use self::OpResult::*;
-        use dcpu::val_type::ValKind::*;
-        use dcpu::register;
+        use super::val_type::ValKind::*;
+        use super::register;
 
         // Once ValKind's have been extracted, evaluation order of `a` and `b` doesn't
         // matter, and they can be evaluated multiple times.

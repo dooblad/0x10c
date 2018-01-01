@@ -1,5 +1,6 @@
-pub mod rect;
 pub mod cube;
+pub mod rect;
+pub mod pixel_quad;
 mod util;
 
 use cgmath::SquareMatrix;
@@ -12,8 +13,6 @@ use std::ptr;
 use graphics::Render;
 use graphics::renderer::RenderingContext;
 use graphics::texture::Texture;
-
-// TODO: Reference graphics/geom/mesh.cc from C++ code to get Mesh working.
 
 struct VertexArray {
     pub vbo_id: GLuint,
@@ -106,11 +105,15 @@ impl Mesh {
                                 ptr::null());
         vbo_id
     }
+
+    pub fn set_diffuse_texture(&mut self, diffuse_texture: Texture) {
+        self.diffuse_texture = Some(diffuse_texture);
+    }
 }
 
 impl Render for Mesh {
     fn render(&mut self, context: &mut RenderingContext) {
-        let mut uniforms = context.program.uniforms();
+        let uniforms = context.program.uniforms();
 
         unsafe {
             // Bind.

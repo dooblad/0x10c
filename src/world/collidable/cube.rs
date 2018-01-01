@@ -33,14 +33,14 @@ impl Cube {
     }
 }
 
-impl Collide for Cube {
-    fn aabb(&self) -> &AABB {
-        &self.aabb
-    }
-}
-
 impl Render for Cube {
     fn render(&mut self, context: &mut RenderingContext) {
         self.mesh.render(context);
+    }
+}
+
+impl Collide for Cube {
+    fn aabb(&self) -> &AABB {
+        &self.aabb
     }
 }

@@ -102,6 +102,10 @@ pub fn tick(&mut self, event_handler: &event_handler::EventHandler) {
 
     fn characteristic_vectors(rotation: &Rotation) -> (Vector3, Vector3, Vector3) {
         let &Rotation { horizontal_angle, vertical_angle } = rotation;
+        // TBH, I'm not really sure why we need to add PI here, but this makes it so the
+        // coordinate system is normal with zeroes for both horizontal and vertical
+        // angles.
+        let horizontal_angle = horizontal_angle + std::f32::consts::PI;
 
         let facing_dir = Vector3 {
             x: vertical_angle.cos() * horizontal_angle.sin(),
@@ -115,7 +119,6 @@ pub fn tick(&mut self, event_handler: &event_handler::EventHandler) {
             z: (horizontal_angle - std::f32::consts::PI / 2f32).cos(),
         }.normalize();
 
-//        let up = facing_dir.cross(right).normalize();
         let up = right.cross(facing_dir).normalize();
 
         (facing_dir, right, up)

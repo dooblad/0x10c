@@ -35,14 +35,14 @@ impl Rect {
     }
 }
 
-impl Collide for Rect {
-    fn aabb(&self) -> &AABB {
-        &self.aabb
-    }
-}
-
 impl Render for Rect {
     fn render(&mut self, context: &mut RenderingContext) {
         self.mesh.render(context);
+    }
+}
+
+impl Collide for Rect {
+    fn aabb(&self) -> &AABB {
+        &self.aabb
     }
 }

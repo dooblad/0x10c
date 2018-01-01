@@ -1,7 +1,7 @@
 use std::fmt;
 
-use dcpu::Dcpu;
-use dcpu::instruction::ValSize;
+use super::Dcpu;
+use super::instruction::ValSize;
 
 pub enum ValType {
     Register(u16),

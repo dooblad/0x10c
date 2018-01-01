@@ -14,6 +14,7 @@ pub struct Range {
     pub max: f32,
 }
 
+// TODO: Make this return an option for objects that aren't collidable.
 pub trait Collide : Render {
     fn aabb(&self) -> &AABB;
 }

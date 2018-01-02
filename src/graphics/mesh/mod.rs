@@ -106,6 +106,10 @@ impl Mesh {
         vbo_id
     }
 
+    pub fn diffuse_texture(&mut self) -> &mut Option<Texture> {
+        &mut self.diffuse_texture
+    }
+
     pub fn set_diffuse_texture(&mut self, diffuse_texture: Texture) {
         self.diffuse_texture = Some(diffuse_texture);
     }

@@ -1,3 +1,7 @@
+use rand;
+use rand::distributions;
+use rand::distributions::IndependentSample;
+
 use entity::Entity;
 use game::event_handler::EventHandler;
 use graphics::Render;
@@ -6,7 +10,7 @@ use graphics::mesh::pixel_quad::PixelQuad;
 use util::collide::{AABB, Range};
 use util::collide::Collide;
 use util::math::Point3;
-use world::Interactables;
+use world::EntitySlice;
 
 const SCREEN_DIMENSIONS: (u32, u32) = (128, 96);
 const SCREEN_SIZE: f32 = 2.0;
@@ -22,7 +26,7 @@ impl Lem {
         let bounds = [
             Range { min: -s, max: s },
             Range { min: -s, max: s },
-            Range { min: -0.1, max: 0.1 },
+            Range { min: -0.05, max: 0.05 },
         ];
         Lem {
             aabb: AABB::new(bounds, position),
@@ -43,8 +47,21 @@ impl Collide for Lem {
     }
 }
 
+const PIXELS_TO_FUCK: u32 = 60;
 impl Entity for Lem {
-    fn tick(&mut self, event_handler: &EventHandler, interactables: &mut Interactables) {
-        // TODO: Update some SHIT.
+    fn tick(&mut self, _: &EventHandler, _: &Vec<Box<Collide>>,
+            _: EntitySlice) {
+        let idx_range = distributions::Range::new(0, self.screen.pixels().len());
+        let col_range = distributions::Range::new(0, 255);
+        let mut rng = rand::thread_rng();
+        {
+            let pixels = self.screen.pixels();
+            for _ in 0..PIXELS_TO_FUCK {
+                let idx = idx_range.ind_sample(&mut rng);
+                let col = col_range.ind_sample(&mut rng);
+                pixels[idx] = col;
+            }
+        }
+        self.screen.update();
     }
 }

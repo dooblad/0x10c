@@ -31,6 +31,16 @@ impl Texture {
         }
     }
 
+    pub fn update(&mut self, image: image::RgbaImage) {
+        unsafe {
+            gl::BindTexture(gl::TEXTURE_2D, self.id);
+            gl::TexSubImage2D(gl::TEXTURE_2D, Texture::LEVEL_OF_DETAIL, 0, 0,
+                              image.width() as i32, image.height() as i32, gl::RGBA,
+                              gl::UNSIGNED_BYTE, mem::transmute(&image.into_raw()[0]));
+            gl::BindTexture(gl::TEXTURE_2D, 0);
+        }
+    }
+
     pub fn bind_and_send(&self, uniform_name: &str, uniforms: &mut ProgramUniforms) {
         unsafe {
             // TODO: Make this class not just for diffuse textures.

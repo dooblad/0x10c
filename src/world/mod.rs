@@ -1,5 +1,8 @@
 pub mod collidable;
 
+use std;
+use std::slice;
+
 use entity::player::Player;
 use entity::Entity;
 use game::event_handler::EventHandler;
@@ -12,15 +15,12 @@ use util::math::Point3;
 use self::collidable::cube::Cube;
 use self::collidable::rect::Rect;
 
+
 pub struct World {
     player: Player,
-    interactables: Interactables,
+    collidables: Vec<Box<Collide>>,
+    entities: Vec<Box<Entity>>,
     renderer: Renderer,
-}
-
-pub struct Interactables {
-    pub collidables: Vec<Box<Collide>>,
-    pub entities: Vec<Box<Entity>>,
 }
 
 impl World {
@@ -88,30 +88,62 @@ impl World {
 
         World {
             player,
-            interactables: Interactables {
-                collidables,
-                entities,
-            },
+            collidables,
+            entities,
             renderer: Renderer::new(display),
         }
     }
 
     pub fn tick(&mut self, event_handler: &EventHandler) {
-        self.player.tick(event_handler, &mut self.interactables);
+        {
+            let (left, right) = self.entities.split_at_mut(0);
+            self.player.tick(event_handler, &self.collidables,
+                             EntitySlice::new(left, right));
+        }
+
+        for i in 0..self.entities.len() {
+            let (lsplit, rest) = self.entities.split_at_mut(i);
+            let (mid, rsplit) = rest.split_at_mut(1);
+            mid[0].tick(event_handler, &self.collidables,
+                        EntitySlice::new(lsplit, rsplit));
+        }
     }
 
     pub fn render(&mut self, camera: &camera::Camera) {
         self.renderer.start_frame(camera);
-        self.renderer.render(camera, &mut self.interactables.collidables);
-        self.renderer.render(camera, &mut self.interactables.entities);
+        self.renderer.render(camera, &mut self.collidables);
+        self.renderer.render(camera, &mut self.entities);
         self.renderer.end_frame();
     }
 
-    pub fn player(&self) -> &Player {
-        &self.player
+    pub fn player(&mut self) -> &mut Player {
+        &mut self.player
     }
+}
 
-    pub fn interactables(&self) -> &Interactables {
-        &self.interactables
+
+// TODO: Figure out how to use an iterator instead, if it's possible.
+pub struct EntitySlice<'a> {
+    left: &'a [Box<Entity>],
+    right: &'a [Box<Entity>],
+}
+
+impl<'a> EntitySlice<'a> {
+    pub fn new(left: &'a [Box<Entity>], right: &'a [Box<Entity>])
+        -> EntitySlice<'a> {
+        EntitySlice {
+            left,
+            right,
+        }
+    }
+}
+
+impl<'a> IntoIterator for EntitySlice<'a> {
+    type Item = &'a Box<Entity>;
+    type IntoIter = std::iter::Chain<slice::Iter<'a, Box<Entity>>,
+                                     slice::Iter<'a, Box<Entity>>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.left.into_iter().chain(self.right.into_iter())
     }
 }

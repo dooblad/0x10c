@@ -1,7 +1,7 @@
 use cgmath::InnerSpace;
 use glutin::VirtualKeyCode;
 use std;
-use std::ops::{DerefMut, Neg};
+use std::ops::Neg;
 
 use game::event_handler::EventHandler;
 use graphics::renderer;
@@ -11,7 +11,7 @@ use util::f32::clamp;
 use util::math::{Point3, Vector3, Rotation};
 use util::collide::{AABB, Range};
 use util::collide::Collide;
-use world::Interactables;
+use world::EntitySlice;
 
 const PLAYER_BOUNDS: [Range; 3] = [
     Range { min: -1.0, max: 1.0 },
@@ -161,7 +161,9 @@ impl Player {
 }
 
 impl Entity for Player {
-    fn tick(&mut self, event_handler: &EventHandler, interactables: &mut Interactables) {
+    fn tick(&mut self, event_handler: &EventHandler,
+            collidables: &Vec<Box<Collide>>,
+            entities: EntitySlice) {
         if event_handler.is_key_pressed(&VirtualKeyCode::V) {
             self.fly_mode = !self.fly_mode;
         }
@@ -177,12 +179,12 @@ impl Entity for Player {
         let mut velocity_delta = Vector3 { x: 0.0, y: 0.0, z: 0.0 };
 
         // First, check for collisions with static collidables.
-        for collidable in interactables.collidables.iter_mut() {
-            self.collide(collidable.deref_mut(), &mut velocity_delta);
+        for collidable in collidables {
+            self.collide(&**collidable, &mut velocity_delta);
         }
         // Then, check for entities.
-        for collidable in interactables.entities.iter_mut() {
-            self.collide(collidable.deref_mut(), &mut velocity_delta);
+        for collidable in entities.into_iter() {
+            self.collide(&**collidable, &mut velocity_delta);
         }
 
         self.aabb.translate(self.velocity);

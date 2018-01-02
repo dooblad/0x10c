@@ -28,10 +28,14 @@ impl PixelQuad {
         assert!(size > 0.0);
         let mut pixels = vec![0; (4 * dimensions.0 * dimensions.1) as usize];
         for i in 0..pixels.len() {
-            if i % 3 == 0 {
-                pixels[i] = 255;
-            } else if i % 3 == 1 {
-                pixels[i] = 128;
+            if i % 4 == 0 {
+                pixels[i] = 0x42;
+            } else if i % 4 == 1 {
+                pixels[i] = 0x86;
+            } else if i % 4 == 2 {
+                pixels[i] = 0xf4;
+            } else if i % 4 == 3 {
+                pixels[i] = 0xff;
             }
         }
         let diffuse_texture = Self::gen_texture(dimensions, &pixels);
@@ -45,7 +49,12 @@ impl PixelQuad {
     }
 
     pub fn update(&mut self) {
-        self.mesh.set_diffuse_texture(Self::gen_texture(self.dimensions, &self.pixels))
+        let image = RgbaImage::from_raw(self.dimensions.0, self.dimensions.1,
+                                        self.pixels.clone()).unwrap();
+        match self.mesh.diffuse_texture {
+            Some(ref mut dt) => dt.update(image),
+            None => panic!("No diffuse texture found on mesh"),
+        };
     }
 
     fn gen_texture(dimensions: (u32, u32), pixels: &Vec<u8>) -> Texture {
@@ -90,8 +99,8 @@ impl PixelQuad {
         self.dimensions
     }
 
-    pub fn pixels(&self) -> &Vec<u8> {
-        &self.pixels
+    pub fn pixels(&mut self) -> &mut Vec<u8> {
+        &mut self.pixels
     }
 }
 

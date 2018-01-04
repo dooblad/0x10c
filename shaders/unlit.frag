@@ -47,5 +47,6 @@ void main() {
     vec3 ambient = diffuse_component * light_ambient;
     vec3 diffuse = diffuse_shade * diffuse_component * light_diffuse * fa;
 
-    frag_color = vec4(emissive_color, 1.0) + vec4(ambient + diffuse, 1.0);
+    // frag_color = vec4(emissive_color, 1.0) + vec4(ambient + diffuse, 1.0);
+    frag_color = vec4(diffuse_component, 1.0);
 }

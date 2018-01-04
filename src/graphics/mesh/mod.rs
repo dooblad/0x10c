@@ -117,7 +117,7 @@ impl Mesh {
 
 impl Render for Mesh {
     fn render(&mut self, context: &mut RenderingContext) {
-        let uniforms = context.program.uniforms();
+        let uniforms = context.curr_shader().uniforms();
 
         unsafe {
             // Bind.

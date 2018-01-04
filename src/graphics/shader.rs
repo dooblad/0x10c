@@ -7,6 +7,7 @@ use std::ffi::CString;
 use std::ptr;
 use std::str;
 
+use ::read_file;
 use graphics::mesh::AttribIndices;
 
 // TODO: Do some shit with macros like glium has with `uniform!`.
@@ -152,10 +153,22 @@ impl ProgramUniforms {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-pub struct ShaderSource<'a> {
-    pub vertex_shader: &'a str,
-    pub fragment_shader: &'a str,
+pub struct ShaderSource {
+    pub vertex_shader: String,
+    pub fragment_shader: String,
 }
+
+impl From<String> for ShaderSource {
+    fn from(name: String) -> Self {
+        ShaderSource {
+            vertex_shader: read_file(
+                &format!("shaders/{}.vert", name)).unwrap(),
+            fragment_shader: read_file(
+                &format!("shaders/{}.frag", name)).unwrap(),
+        }
+    }
+}
+
 
 pub struct ShaderProgram {
     id: GLuint,
@@ -164,8 +177,10 @@ pub struct ShaderProgram {
 
 impl ShaderProgram {
     pub fn new(source: ShaderSource) -> ShaderProgram {
-        let vs_id = Self::compile_shader(source.vertex_shader, gl::VERTEX_SHADER);
-        let fs_id = Self::compile_shader(source.fragment_shader, gl::FRAGMENT_SHADER);
+        let vs_id = Self::compile_shader(source.vertex_shader.as_str(),
+                                         gl::VERTEX_SHADER);
+        let fs_id = Self::compile_shader(source.fragment_shader.as_str(),
+                                         gl::FRAGMENT_SHADER);
         let program_id = Self::link_program(vs_id, fs_id);
 
         ShaderProgram {

@@ -37,7 +37,11 @@ impl Lem {
 
 impl Render for Lem {
     fn render(&mut self, context: &mut RenderingContext) {
+        // TODO: Change shader to not have lighting here.
+        context.push_shader_state();
+        context.bind_shader(String::from("unlit"));
         self.screen.render(context);
+        context.pop_shader_state();
     }
 }
 
@@ -47,7 +51,7 @@ impl Collide for Lem {
     }
 }
 
-const PIXELS_TO_FUCK: u32 = 60;
+const PIXELS_TO_DIDDLE: u32 = 60;
 impl Entity for Lem {
     fn tick(&mut self, _: &EventHandler, _: &Vec<Box<Collide>>,
             _: EntitySlice) {
@@ -56,7 +60,7 @@ impl Entity for Lem {
         let mut rng = rand::thread_rng();
         {
             let pixels = self.screen.pixels();
-            for _ in 0..PIXELS_TO_FUCK {
+            for _ in 0..PIXELS_TO_DIDDLE {
                 let idx = idx_range.ind_sample(&mut rng);
                 let col = col_range.ind_sample(&mut rng);
                 pixels[idx] = col;

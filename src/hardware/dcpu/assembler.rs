@@ -47,6 +47,8 @@ enum ValType {
     Label(String),
 }
 
+// TODO: Support data sections.
+
 pub fn assemble(source: &str) -> Result<Vec<u16>,Vec<String>> {
     use super::instruction::make_instruction_bits;
 

@@ -150,8 +150,6 @@ impl Dcpu {
                 self.finished = true;
             }
 
-            println!("LAST: {}, CURR: {}", self.last_pc, self.pc());
-
             self.last_pc = self.pc();
         }
     }

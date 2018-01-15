@@ -30,6 +30,8 @@ pub struct Player {
     velocity: Vector3,
     rotation: Rotation,
     fly_mode: bool,
+    // If the player is using a computer, for example.
+    input_captured: bool,
 }
 
 impl Player {
@@ -42,6 +44,7 @@ impl Player {
                 vertical_angle: 0.0,
             },
             fly_mode: false,
+            input_captured: false,
         }
     }
 
@@ -93,41 +96,45 @@ impl Player {
     fn update_velocity(&mut self, event_handler: &EventHandler) {
         let (forward, right, up) = self.movement_vectors();
 
-        // Forward
-        if event_handler.is_key_down(&VirtualKeyCode::W) {
-            self.velocity += MOVE_SPEED * forward;
-        }
-        // Backward
-        if event_handler.is_key_down(&VirtualKeyCode::S) {
-            self.velocity += MOVE_SPEED * forward.neg();
-        }
-        // Left
-        if event_handler.is_key_down(&VirtualKeyCode::A) {
-            self.velocity += MOVE_SPEED * right.neg();
-        }
-        // Right
-        if event_handler.is_key_down(&VirtualKeyCode::D) {
-            self.velocity += MOVE_SPEED * right;
-        }
-
-        if self.fly_mode {
-            // Up
-            if event_handler.is_key_down(&VirtualKeyCode::Space) {
-                self.velocity += MOVE_SPEED * up;
+        // TODO: Separate input capture and velocity updating, so we can do a clean check
+        // for `input_captured`.
+        if !self.input_captured {
+            // Forward
+            if event_handler.is_key_down(&VirtualKeyCode::W) {
+                self.velocity += MOVE_SPEED * forward;
             }
-            // Down
-            if event_handler.is_key_down(&VirtualKeyCode::LShift) {
-                self.velocity -= MOVE_SPEED * up;
+            // Backward
+            if event_handler.is_key_down(&VirtualKeyCode::S) {
+                self.velocity += MOVE_SPEED * forward.neg();
+            }
+            // Left
+            if event_handler.is_key_down(&VirtualKeyCode::A) {
+                self.velocity += MOVE_SPEED * right.neg();
+            }
+            // Right
+            if event_handler.is_key_down(&VirtualKeyCode::D) {
+                self.velocity += MOVE_SPEED * right;
             }
 
-            self.velocity.y *= VELOCITY_DAMPENING_FACTOR;
-        } else {
-            self.velocity += GRAVITY * up.neg();
+            if self.fly_mode {
+                // Up
+                if event_handler.is_key_down(&VirtualKeyCode::Space) {
+                    self.velocity += MOVE_SPEED * up;
+                }
+                // Down
+                if event_handler.is_key_down(&VirtualKeyCode::LShift) {
+                    self.velocity -= MOVE_SPEED * up;
+                }
 
-            // Up
-            if event_handler.is_key_pressed(&VirtualKeyCode::Space) {
-                self.velocity.y = 0.0;
-                self.velocity += JUMP_SPEED * up;
+                self.velocity.y *= VELOCITY_DAMPENING_FACTOR;
+            } else {
+                self.velocity += GRAVITY * up.neg();
+
+                // Up
+                if event_handler.is_key_pressed(&VirtualKeyCode::Space) {
+                    self.velocity.y = 0.0;
+                    self.velocity += JUMP_SPEED * up;
+                }
             }
         }
 
@@ -164,11 +171,13 @@ impl Entity for Player {
     fn tick(&mut self, event_handler: &EventHandler,
             collidables: &Vec<Box<Collide>>,
             entities: EntitySlice) {
-        if event_handler.is_key_pressed(&VirtualKeyCode::V) {
-            self.fly_mode = !self.fly_mode;
-        }
+        if !self.input_captured {
+            if event_handler.is_key_pressed(&VirtualKeyCode::V) {
+                self.fly_mode = !self.fly_mode;
+            }
 
-        self.update_rotation(event_handler);
+            self.update_rotation(event_handler);
+        }
 
         self.update_velocity(event_handler);
 
@@ -182,14 +191,32 @@ impl Entity for Player {
         for collidable in collidables {
             self.collide(&**collidable, &mut velocity_delta);
         }
-        // Then, check for entities.
-        for collidable in entities.into_iter() {
-            self.collide(&**collidable, &mut velocity_delta);
+        // Then, check for collisions/interactions with entities.
+        for entity in entities.into_iter() {
+            self.collide(&**entity, &mut velocity_delta);
+            if entity.interactable() {
+                // TODO: Ray collision.
+                if event_handler.is_key_pressed(&VirtualKeyCode::Return) {
+                    self.input_captured = true;
+                    (& mut**entity).interact();
+                } else if event_handler.is_key_pressed(&VirtualKeyCode::Escape) {
+                    self.input_captured = false;
+                    (& mut**entity).stop_interact();
+                }
+            }
         }
 
         self.aabb.translate(self.velocity);
         self.velocity += velocity_delta;
     }
+
+    fn interactable(&self) -> bool {
+        false
+    }
+
+    fn interact(&mut self) { }
+
+    fn stop_interact(&mut self) { }
 }
 
 impl Collide for Player {
@@ -199,7 +226,5 @@ impl Collide for Player {
 }
 
 impl Render for Player {
-    fn render(&mut self, _: &mut renderer::RenderingContext) {
-        // TODO: Not sure yet how to or if we should render ourselves.
-    }
+    fn render(&mut self, _: &mut renderer::RenderingContext) { }
 }

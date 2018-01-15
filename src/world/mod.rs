@@ -85,6 +85,7 @@ impl World {
             z: -2.0,
         });
         entities.push(Box::new(monitor));
+        // TODO: Add entities.
 
         World {
             player,
@@ -124,12 +125,12 @@ impl World {
 
 // TODO: Figure out how to use an iterator instead, if it's possible.
 pub struct EntitySlice<'a> {
-    left: &'a [Box<Entity>],
-    right: &'a [Box<Entity>],
+    left: &'a mut [Box<Entity>],
+    right: &'a mut [Box<Entity>],
 }
 
 impl<'a> EntitySlice<'a> {
-    pub fn new(left: &'a [Box<Entity>], right: &'a [Box<Entity>])
+    pub fn new(left: &'a mut [Box<Entity>], right: &'a mut [Box<Entity>])
         -> EntitySlice<'a> {
         EntitySlice {
             left,
@@ -139,9 +140,9 @@ impl<'a> EntitySlice<'a> {
 }
 
 impl<'a> IntoIterator for EntitySlice<'a> {
-    type Item = &'a Box<Entity>;
-    type IntoIter = std::iter::Chain<slice::Iter<'a, Box<Entity>>,
-                                     slice::Iter<'a, Box<Entity>>>;
+    type Item = &'a mut Box<Entity>;
+    type IntoIter = std::iter::Chain<slice::IterMut<'a, Box<Entity>>,
+                                     slice::IterMut<'a, Box<Entity>>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.left.into_iter().chain(self.right.into_iter())

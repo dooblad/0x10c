@@ -438,8 +438,8 @@ const FONT: [[u16; 2]; 95] = [
     ],
     [
         // "o"
-        0b0011000001001000,
-        0b0011000000000000,
+        0b0011100001000100,
+        0b0011100000000000,
     ],
     [
         // "p"
@@ -548,8 +548,8 @@ impl Lem {
         ];
         let mut dcpu = Dcpu::new();
         // TODO: Make instructions lowercase (easier typing, yo).
-        dcpu.load_program(&assembler::assemble(
-            "\
+        let program = assembler::assemble(
+"\
 ; Initial screen coord
 SET I, 0
 ; FG color idx
@@ -560,7 +560,7 @@ SET Y, 0
 SET A, 0
 
 ; Start by initializing the cursor.
-SET PC, set_blink
+JSR set_blink
 
 :loop
   IFE [0x9001], 0
@@ -581,69 +581,66 @@ SET PC, set_blink
 
   ; Check for a backspace.
   IFE A, 0x10
-  SET PC, del_char
+    SET PC, backspace
+
   ; Make sure it's in the range [A-Z].
   IFL A, 0x20
-  SET PC, loop
+    SET PC, loop
   IFG A, 0x7f
-  SET PC, loop
+    SET PC, loop
+  ; Map it down to a font index.
   SUB A, 0x20
 
-  :add_char
-    ; Build monitor cell bits.
-    SET J, 0
-    BOR J, A
-    SHL X, 12
-    BOR J, X
-    SHR X, 12
-    SHL Y, 8
-    BOR J, Y
-    SHR Y, 8
+  JSR add_char
 
-    SET [0x8000+I], J
-    ADD I, 1
-    SET PC, set_blink
+  SET PC, loop
 
-  :del_char
-    IFE I, 0
-    SET PC, loop
-    SET [0x8000+I], 0
-    SUB I, 1
-    SET PC, set_blink
+:backspace
+  JSR del_char
+  SET PC, loop
 
-  :set_blink
-    ; Make the cursor blink in its new position.
-    SET J, 1
-    SHL J, 7
-    SET [0x8000+I], J
-    SET PC, loop
+:add_char
+  ; Build monitor cell bits.
+  SET J, 0
+  BOR J, A
+  SHL X, 12
+  BOR J, X
+  SHR X, 12
+  SHL Y, 8
+  BOR J, Y
+  SHR Y, 8
 
-; Do not call this subroutine if the keyboard buffer is empty.
-;
-; Result is placed in `A`.
-;:pop_key
-;    ;SET PUSH, B
-;    SET B, [0x9000]
-;    SET A, [0x9000+B]
-;    SUB [0x9000], 1
-;    ;SET B, POP
-;    SET PC, POP
+  SET [0x8000+I], J
+  ADD I, 1
+  JSR set_blink
+  SET PC, POP
 
-; I: Screen idx
-; J: Char idx
-; X: FG color idx
-; Y: BG color idx
-;:set_char
-;SET A, 0
-;BOR A, J
-;SHL X, 12
-;BOR A, X
-;SHR X, 12
-;SHL Y, 8
-;BOR A, Y
-;SHR Y, 8
+:del_char
+  IFE I, 0
+  SET PC, loop
+  SET [0x8000+I], 0
+  SUB I, 1
+  JSR set_blink
+  SET PC, POP
+
+:set_blink
+  ; Make the cursor blink in its new position.
+  SET J, 1
+  SHL J, 7
+  SET [0x8000+I], J
+  SET PC, POP
             "
-        ).unwrap());
+        );
+        match program {
+            Ok(p) => dcpu.load_program(&p),
+            Err(errs) => {
+                for err in errs {
+                    println!("{}", err);
+                }
+                panic!("Compilation failed")
+            }
+        };
+
 
         Lem {
             aabb: AABB::new(bounds, position),
@@ -758,7 +755,7 @@ impl Entity for Lem {
             keyboard::try_push_key(&mut self.dcpu, event_handler);
         }
 
-        for _ in 0..4 {
+        for _ in 0..10 {
             self.dcpu.tick();
         }
 

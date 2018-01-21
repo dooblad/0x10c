@@ -3,6 +3,9 @@ use std::fmt;
 use super::Dcpu;
 use super::instruction::ValSize;
 
+use self::ValType::*;
+
+
 pub enum ValType {
     Register(u16),
     RegisterDeref(u16),
@@ -28,7 +31,6 @@ pub enum ValKind {
 
 impl ValType {
     pub fn new(val_code: u16, val_size: ValSize) -> ValType {
-        use self::ValType::*;
         match val_code {
             0x00...0x07 => Register(val_code),
             0x08...0x0f => RegisterDeref(val_code - 0x8),
@@ -51,7 +53,6 @@ impl ValType {
     }
 
     pub fn val_code(&self) -> u16 {
-        use self::ValType::*;
         match *self {
             Register(r) => r,
             RegisterDeref(r) => r + 0x8,
@@ -69,7 +70,6 @@ impl ValType {
     }
 
     pub fn eval(&self, dcpu: &mut Dcpu) -> ValKind {
-        use self::ValType::*;
         use self::ValKind;
         match *self {
             Register(r) => ValKind::Register(r),
@@ -111,9 +111,7 @@ impl ValType {
         }
     }
 
-
     pub fn num_cycles(&self) -> u32 {
-        use self::ValType::*;
         match *self {
             Register(_) => 0,
             RegisterDeref(_) => 0,
@@ -130,11 +128,18 @@ impl ValType {
             Literal(_) => 0,
         }
     }
+
+    /// How many words does this value type extend beyond the first word.
+    pub fn num_words(&self) -> u16 {
+        match *self {
+            RegisterNextWordDeref(_) | NextWordDeref | NextWord => 1,
+            _ => 0,
+        }
+    }
 }
 
 impl fmt::Display for ValType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::ValType::*;
         // TODO: Should we be able to get this info from the enum?
         let registers = ["A", "B", "C", "X", "Y", "Z", "I", "J"];
         let result = match *self {

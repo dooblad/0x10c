@@ -1,59 +1,92 @@
 use std::fmt;
 
 use super::Dcpu;
-use super::op::{Op, OpResult};
+use super::op::{BasicOp, SpecialOp, OpResult};
 use super::val_type::ValType;
+
+use self::Instruction::*;
+
 
 pub enum ValSize {
     A,  // 6 bits
     B,  // 5 bits
 }
 
-pub struct Instruction {
-    op: Op,
+pub enum Instruction {
+    Basic(BasicInstruction),
+    Special(SpecialInstruction),
+}
+
+pub struct BasicInstruction {
+    op: BasicOp,
     a: ValType,
     b: ValType,
 }
 
+pub struct SpecialInstruction {
+    op: SpecialOp,
+    a: ValType,
+}
+
 impl Instruction {
     pub fn new(word: u16) -> Instruction {
-        let op_code = word & 0b11111;
-        let b_val = (word >> 5) & 0b11111;
-        let a_val = (word >> 10) & 0b111111;
-        Instruction {
-            op: Op::new(op_code),
-            a: ValType::new(a_val, ValSize::A),
-            b: ValType::new(b_val, ValSize::B),
+        let lower_bits = word & 0b11111;
+        if lower_bits == 0 {
+            let op_code = (word >> 5) & 0b11111;
+            let a_val = (word >> 10) & 0b111111;
+            Special(SpecialInstruction {
+                op: SpecialOp::new(op_code),
+                a: ValType::new(a_val, ValSize::A),
+            })
+        } else {
+            let op_code = lower_bits;
+            let b_val = (word >> 5) & 0b11111;
+            let a_val = (word >> 10) & 0b111111;
+            Basic(BasicInstruction {
+                op: BasicOp::new(op_code),
+                a: ValType::new(a_val, ValSize::A),
+                b: ValType::new(b_val, ValSize::B),
+            })
         }
     }
 
     pub fn eval(&self, dcpu: &mut Dcpu) -> OpResult {
-        // Always evaluate `b` before `a`.
-        let b_val = self.b.eval(dcpu);
-        let a_val = self.a.eval(dcpu);
-        self.op.eval(b_val, a_val, dcpu)
+        match *self {
+            Basic(ref i) => {
+                // Always evaluate `b` before `a`.
+                let b_val = i.b.eval(dcpu);
+                let a_val = i.a.eval(dcpu);
+                i.op.eval(b_val, a_val, dcpu)
+            },
+            Special(ref i) => {
+                let a_val = i.a.eval(dcpu);
+                i.op.eval(a_val, dcpu)
+            },
+        }
     }
 
     pub fn num_words(&self) -> u16 {
-        use self::ValType::*;
-
-        // Must be at least 1 word long.
-        let mut result = 1;
-        result += match self.a {
-            RegisterNextWordDeref(_) | NextWordDeref | NextWord => 1,
-            _ => 0,
-        };
-        result += match self.b {
-            RegisterNextWordDeref(_) | NextWordDeref | NextWord => 1,
-            _ => 0,
-        };
-        result
+        1 + match *self {
+            Basic(ref i) => {
+                i.a.num_words() + i.b.num_words()
+            },
+            Special(ref i) => {
+                i.a.num_words()
+            },
+        }
     }
 }
 
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}, {}", self.op, self.b, self.a)
+        match *self {
+            Basic(ref i) => {
+                write!(f, "{} {}, {}", i.op, i.b, i.a)
+            },
+            Special(ref i) => {
+                write!(f, "{} {}", i.op, i.a)
+            },
+        }
     }
 }
 

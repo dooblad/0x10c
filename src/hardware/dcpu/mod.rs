@@ -195,7 +195,7 @@ impl Dcpu {
     }
 
     pub fn decr_sp(&mut self) {
-        self.sp += 1;
+        self.sp -= 1;
     }
 
     pub fn ex(&self) -> u16 {
@@ -244,6 +244,7 @@ impl fmt::Display for Dcpu {
         )
     }
 }
+
 
 #[cfg(test)]
 mod tests {

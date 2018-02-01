@@ -20,8 +20,8 @@ impl Clone for Rotation {
 }
 
 pub struct Ray3 {
-    pos: Point3,
-    dir: Vector3,
+    pub pos: Point3,
+    pub dir: Vector3,
 }
 
 // We're pretty much always going to be working with 32-bit floats, so we might as well define some

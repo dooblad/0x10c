@@ -2,11 +2,11 @@ pub mod camera;
 pub mod event_handler;
 
 use glutin;
-use graphics;
 use std::thread;
 use std::time::{Duration, Instant};
 
 use entity;
+use graphics::Display;
 use world;
 
 const WINDOW_DIMENSIONS: (u32, u32) = (800, 500);
@@ -24,7 +24,7 @@ impl Game {
             .with_dimensions(WINDOW_DIMENSIONS.0, WINDOW_DIMENSIONS.1)
             .with_title(WINDOW_TITLE);
         let context = glutin::ContextBuilder::new();
-        let display = graphics::Display::new(window, context, &events_loop).unwrap();
+        let display = Display::new(window, context, &events_loop).unwrap();
 
         {
             let gl_window = display.gl_window();
@@ -83,7 +83,7 @@ struct MainGameState {
 }
 
 impl MainGameState {
-    pub fn new(display: graphics::Display) -> MainGameState {
+    pub fn new(display: Display) -> MainGameState {
         let camera = camera::Camera::new(WINDOW_DIMENSIONS.0, WINDOW_DIMENSIONS.1);
         let player = entity::player::Player::new();
         let world = world::World::new(player, display);

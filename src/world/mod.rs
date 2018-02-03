@@ -7,8 +7,8 @@ use entity::player::Player;
 use entity::Entity;
 use game::event_handler::EventHandler;
 use graphics::Display;
-use graphics::renderer::Renderer;
-use game::camera;
+use graphics::renderer::{Renderer, RenderingContext};
+use game::camera::Camera;
 use hardware::lem::Lem;
 use util::collide::Collide;
 use util::math::Point3;
@@ -110,11 +110,11 @@ impl World {
         }
     }
 
-    pub fn render(&mut self, camera: &camera::Camera) {
-        self.renderer.start_frame(camera);
-        self.renderer.render(camera, &mut self.collidables);
-        self.renderer.render(camera, &mut self.entities);
-        self.renderer.end_frame();
+    pub fn render(&mut self, camera: &Camera) {
+        self.renderer.render(Renderables {
+            collidables: &mut self.collidables,
+            entities: &mut self.entities,
+        }, camera);
     }
 
     pub fn player(&mut self) -> &mut Player {
@@ -124,6 +124,24 @@ impl World {
 
 
 // TODO: Figure out how to use an iterator instead, if it's possible.
+
+pub struct Renderables<'a> {
+    pub collidables: &'a mut Vec<Box<Collide>>,
+    pub entities: &'a mut Vec<Box<Entity>>,
+}
+
+impl<'a> Renderables<'a> {
+    pub fn render_all(&mut self, context: &mut RenderingContext) {
+        for renderable in self.collidables.iter_mut() {
+            renderable.render(context);
+        }
+        for renderable in self.entities.iter_mut() {
+            renderable.render(context);
+        }
+    }
+}
+
+
 pub struct EntitySlice<'a> {
     left: &'a mut [Box<Entity>],
     right: &'a mut [Box<Entity>],

@@ -153,18 +153,50 @@ impl ProgramUniforms {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// Describes the structure of the shader pipeline (e.g., whether there is a geometry
+/// shader).
+pub enum ShaderType {
+    /// vertex shader -> fragment shader.
+    VertFrag,
+    /// vertex shader -> geometry shader -> fragment shader.
+    VertGeomFrag,
+}
+
+pub struct ShaderConfig {
+    pub name: String,
+    pub shader_type: ShaderType,
+}
+
 pub struct ShaderSource {
     pub vertex_shader: String,
+    pub geometry_shader: Option<String>,
     pub fragment_shader: String,
 }
 
-impl From<String> for ShaderSource {
-    fn from(name: String) -> Self {
-        ShaderSource {
-            vertex_shader: read_file(
-                &format!("shaders/{}.vert", name)).unwrap(),
-            fragment_shader: read_file(
-                &format!("shaders/{}.frag", name)).unwrap(),
+impl From<ShaderConfig> for ShaderSource {
+    fn from(ShaderConfig {name, shader_type}: ShaderConfig) -> Self {
+        use self::ShaderType::*;
+
+        let vertex_shader = read_file(
+            &format!("shaders/{}.vert", name)).unwrap();
+        let fragment_shader = read_file(
+            &format!("shaders/{}.frag", name)).unwrap();
+        match shader_type {
+            VertFrag => {
+                ShaderSource {
+                    vertex_shader,
+                    fragment_shader,
+                    geometry_shader: None,
+                }
+            },
+            VertGeomFrag => {
+                ShaderSource {
+                    vertex_shader,
+                    fragment_shader,
+                    geometry_shader: Some(read_file(
+                        &format!("shaders/{}.geom", name)).unwrap()),
+                }
+            },
         }
     }
 }
@@ -179,9 +211,13 @@ impl ShaderProgram {
     pub fn new(source: ShaderSource) -> ShaderProgram {
         let vs_id = Self::compile_shader(source.vertex_shader.as_str(),
                                          gl::VERTEX_SHADER);
+        let gs_id = match source.geometry_shader {
+            Some(gs) => Some(Self::compile_shader(gs.as_str(), gl::GEOMETRY_SHADER)),
+            None => None,
+        };
         let fs_id = Self::compile_shader(source.fragment_shader.as_str(),
                                          gl::FRAGMENT_SHADER);
-        let program_id = Self::link_program(vs_id, fs_id);
+        let program_id = Self::link_program(vs_id, gs_id, fs_id);
 
         ShaderProgram {
             id: program_id,
@@ -243,13 +279,17 @@ impl ShaderProgram {
         }
     }
 
-    fn link_program(vs_id: GLuint, fs_id: GLuint) -> GLuint {
+    fn link_program(vs_id: GLuint, gs_id: Option<GLuint>, fs_id: GLuint) -> GLuint {
         unsafe {
             let program = gl::CreateProgram();
 
             Self::setup_attrib_locs(program);
 
             gl::AttachShader(program, vs_id);
+            match gs_id {
+                Some(id) => gl::AttachShader(program, id),
+                None => (),
+            };
             gl::AttachShader(program, fs_id);
             gl::LinkProgram(program);
             // Get the link status.

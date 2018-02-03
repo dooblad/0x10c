@@ -38,56 +38,6 @@ impl Camera {
         }
     }
 
-    /*
-pub fn tick(&mut self, event_handler: &event_handler::EventHandler) {
-    let (mouse_x, mouse_y) = event_handler.mouse_delta();
-    let mouse_x = mouse_x as f32 * ROTATION_SPEED;
-    let mouse_y = mouse_y as f32 * ROTATION_SPEED;
-    self.horizontal_angle += mouse_x / 100.0;
-    self.vertical_angle += mouse_y / 100.0;
-
-    // Prevent looking too far up or down, causing the camera to go upside down.
-    self.vertical_angle = if self.vertical_angle > std::f32::consts::FRAC_PI_2 {
-        std::f32::consts::FRAC_PI_2
-    } else if self.vertical_angle < -std::f32::consts::FRAC_PI_2 {
-        -std::f32::consts::FRAC_PI_2
-    } else {
-        self.vertical_angle
-    };
-
-    let (facing_dir, right_dir, up_dir) = Self::characteristic_vectors(self.horizontal_angle,
-                                                                       self.vertical_angle);
-    let facing_dir = facing_dir * MOVE_SPEED;
-    let right_dir = right_dir * MOVE_SPEED;
-    let up_dir = up_dir * MOVE_SPEED;
-
-    // Forward
-    if event_handler.is_key_down(&glutin::VirtualKeyCode::W) {
-        self.position += facing_dir;
-    }
-    // Backward
-    if event_handler.is_key_down(&glutin::VirtualKeyCode::S) {
-        self.position += facing_dir.neg();
-    }
-    // Left
-    if event_handler.is_key_down(&glutin::VirtualKeyCode::A) {
-        self.position += right_dir;
-    }
-    // Right
-    if event_handler.is_key_down(&glutin::VirtualKeyCode::D) {
-        self.position += right_dir.neg();
-    }
-    // Up
-    if event_handler.is_key_down(&glutin::VirtualKeyCode::Space) {
-        self.position += up_dir;
-    }
-    // Down
-    if event_handler.is_key_down(&glutin::VirtualKeyCode::LShift) {
-        self.position += up_dir.neg();
-    }
-    }
-    */
-
     pub fn set_view(&mut self, position: &Point3, rotation: &Rotation) {
         self.position = position.clone();
         self.rotation = rotation.clone();

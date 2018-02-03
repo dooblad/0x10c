@@ -1,4 +1,5 @@
 use glutin;
+use glutin::{EventsLoop, VirtualKeyCode};
 use std::collections::HashSet;
 
 pub struct EventHandler {
@@ -7,12 +8,12 @@ pub struct EventHandler {
     mouse_delta: (f64, f64),
     pressed_mouse_buttons: HashSet<u32>,
     // Store the currently-pressed keys and the keys that were pressed on the last tick.
-    last_pressed_keys: HashSet<glutin::VirtualKeyCode>,
-    pressed_keys: HashSet<glutin::VirtualKeyCode>,
+    last_pressed_keys: HashSet<VirtualKeyCode>,
+    pressed_keys: HashSet<VirtualKeyCode>,
 }
 
 impl EventHandler {
-    pub fn new(events_loop: glutin::EventsLoop) -> EventHandler {
+    pub fn new(events_loop: EventsLoop) -> EventHandler {
         EventHandler {
             events_loop,
             close_requested: false,
@@ -39,6 +40,8 @@ impl EventHandler {
             match event {
                 WindowEvent { event, .. } => match event {
                     glutin::WindowEvent::Closed => *close_requested = true,
+                    glutin::WindowEvent::KeyboardInput { input, .. } =>
+                        Self::handle_key_event(input, pressed_keys),
                     _ => (),
                 },
                 DeviceEvent { event, .. } => {
@@ -63,19 +66,7 @@ impl EventHandler {
                                 },
                             }
                         },
-                        Key(input) => match input {
-                            glutin::KeyboardInput { state, virtual_keycode: Some(key), .. } => {
-                                match state {
-                                    glutin::ElementState::Pressed => {
-                                        pressed_keys.insert(key);
-                                    },
-                                    glutin::ElementState::Released => {
-                                        pressed_keys.remove(&key);
-                                    },
-                                }
-                            },
-                            _ => {}
-                        },
+                        Key(input) => Self::handle_key_event(input, pressed_keys),
                         Text { codepoint } => {
                             println!("Codepoint: {}", codepoint);
                         },
@@ -84,6 +75,22 @@ impl EventHandler {
                 Awakened => (),
             }
         });
+    }
+
+    fn handle_key_event(input: glutin::KeyboardInput, pressed_keys: &mut HashSet<VirtualKeyCode>) {
+        match input {
+          glutin::KeyboardInput { state, virtual_keycode: Some(key), .. } => {
+              match state {
+                  glutin::ElementState::Pressed => {
+                      pressed_keys.insert(key);
+                  },
+                  glutin::ElementState::Released => {
+                      pressed_keys.remove(&key);
+                  },
+              }
+          },
+          _ => (),
+        };
     }
 
     pub fn close_requested(&self) -> bool {

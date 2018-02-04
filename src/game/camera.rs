@@ -4,11 +4,18 @@ use std;
 
 use util::math::{Matrix4, Point3, Rotation, Vector3};
 
+
+const FOV: f32 = std::f32::consts::PI / 3.0;
+const Z_RANGE: (f32, f32) = (0.1, 100.0);
+
+#[derive(Clone)]
 pub struct Camera {
     view_matrix: Matrix4,
     projection_matrix: Matrix4,
     position: Point3,
     rotation: Rotation,
+    fov: f32,
+    z_range: (f32, f32),
 }
 
 impl Camera {
@@ -16,31 +23,36 @@ impl Camera {
     // Make it update by checking for a window resize event and calling a
     // `set_window_size` method here.
     pub fn new(width: u32, height: u32) -> Camera {
-        let fov: f32 = std::f32::consts::PI / 3.0;
-        let aspect_ratio = width as f32 / height as f32;
-        let z_far: f32 = 1024.0;
-        let z_near: f32 = 0.1;
-
         let rotation = Rotation {
             horizontal_angle: 0.0,
             vertical_angle: 0.0,
         };
-
         let position = Point3::new(0.0, 0.0, 0.0f32);
-
         let view_matrix = Self::view_matrix_from(&position, &rotation);
+        let aspect_ratio = width as f32 / height as f32;
+        let fov = FOV;
+        let z_range = Z_RANGE;
 
         Camera {
             view_matrix,
-            projection_matrix: cgmath::perspective(cgmath::Rad(fov), aspect_ratio, z_near, z_far),
+            projection_matrix: cgmath::perspective(cgmath::Rad(FOV), aspect_ratio,
+                                                   z_range.0, z_range.1),
             position,
             rotation,
+            fov,
+            z_range,
         }
     }
 
     pub fn set_view(&mut self, position: &Point3, rotation: &Rotation) {
         self.position = position.clone();
         self.rotation = rotation.clone();
+
+        self.view_matrix = Self::view_matrix_from(&self.position, &self.rotation);
+    }
+
+    pub fn set_position(&mut self, position: &Point3) {
+        self.position = position.clone();
 
         self.view_matrix = Self::view_matrix_from(&self.position, &self.rotation);
     }
@@ -78,12 +90,24 @@ impl Camera {
         self.position
     }
 
+    pub fn rotation(&self) -> &Rotation {
+        &self.rotation
+    }
+
     pub fn view_matrix(&self) -> Matrix4 {
         self.view_matrix
     }
 
     pub fn projection_matrix(&self) -> Matrix4 {
         self.projection_matrix
+    }
+
+    pub fn fov(&self) -> f32 {
+        self.fov
+    }
+
+    pub fn z_range(&self) -> (f32, f32) {
+        self.z_range
     }
 }
 

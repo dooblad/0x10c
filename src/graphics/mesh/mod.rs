@@ -90,6 +90,29 @@ impl Mesh {
         self.model_matrix[3][2] = position[2];
     }
 
+    pub fn rotate(&mut self, magnitude: f32, axes: Vector3<GLfloat>) {
+        let x_mag = axes[0] * magnitude;
+        self.model_matrix[1][1] += x_mag.cos();
+        self.model_matrix[2][1] -= x_mag.sin();
+        self.model_matrix[1][2] += x_mag.sin();
+        self.model_matrix[2][2] += x_mag.cos();
+
+        let y_mag = axes[1] * magnitude;
+        self.model_matrix[0][0] += y_mag.cos();
+        self.model_matrix[2][0] += y_mag.sin();
+        self.model_matrix[0][2] -= y_mag.sin();
+        self.model_matrix[2][2] += y_mag.cos();
+
+        let z_mag = axes[2] * magnitude;
+        self.model_matrix[0][0] += z_mag.cos();
+        self.model_matrix[1][0] -= z_mag.sin();
+        self.model_matrix[0][1] += z_mag.sin();
+        self.model_matrix[1][1] += z_mag.cos();
+
+        // TODO: Test method.
+        panic!("Method not tested!");
+    }
+
     unsafe fn gen_vbo(attrib_index: GLuint, num_components: GLint,
                       data: &Vec<GLfloat>) -> u32 {
         let mut vbo_id = 0;

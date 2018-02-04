@@ -58,8 +58,8 @@ impl PixelQuad {
     }
 
     fn gen_texture(dimensions: (u32, u32), pixels: &Vec<u8>) -> Texture {
-        Texture::new(RgbaImage::from_raw(dimensions.0, dimensions.1,
-                                         pixels.clone()).unwrap())
+        Texture::from_image(RgbaImage::from_raw(dimensions.0, dimensions.1,
+                                                pixels.clone()).unwrap())
     }
 
     fn gen_mesh(dimensions: (u32, u32), size: f32, diffuse_texture: Texture) -> Mesh {

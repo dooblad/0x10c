@@ -12,6 +12,7 @@ use game::camera::Camera;
 use hardware::lem::Lem;
 use util::collide::Collide;
 use util::math::Point3;
+
 use self::collidable::cube::Cube;
 use self::collidable::rect::Rect;
 

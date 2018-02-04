@@ -1,4 +1,4 @@
-#version 150
+#version 330 core
 
 // Material Properties
 uniform vec3 diffuse_color;

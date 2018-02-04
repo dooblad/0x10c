@@ -64,70 +64,42 @@ impl Display {
 
 pub mod shadow_map {
     use cgmath;
-    use cgmath::EuclideanSpace;
     use gl;
     use std;
-    use std::ptr;
 
     use graphics::Display;
-    use graphics::shader::ShaderProgram;
+    use graphics::shader::{ProgramUniforms, ShaderProgram};
     use util::math::{Point3, Vector3, Matrix4};
+
+    use super::texture::{Texture, TextureType};
 
 
     const DIMENSIONS: (u32, u32) = (1024, 1024);
-    const NEAR_PLANE: f32 = 0.1;
-    const FAR_PLANE: f32 = 25.0;
+    const Z_RANGE: (f32, f32) = (0.1, 50.0);
     // 90 degrees
     const FOV: f32 = std::f32::consts::FRAC_PI_2;
-    const CUBE_MAP_LAYERS: [u32; 6] = [
-        gl::TEXTURE_CUBE_MAP_POSITIVE_X,
-        gl::TEXTURE_CUBE_MAP_NEGATIVE_X,
-        gl::TEXTURE_CUBE_MAP_POSITIVE_Y,
-        gl::TEXTURE_CUBE_MAP_NEGATIVE_Y,
-        gl::TEXTURE_CUBE_MAP_POSITIVE_Z,
-        gl::TEXTURE_CUBE_MAP_NEGATIVE_Z,
-    ];
 
     /// Shadow map for point-light shadows.
     pub struct ShadowMap {
         fbo: u32,
-        tex_id: u32,
+        texture: Texture,
         dimensions: (u32, u32),
+        z_range: (f32, f32),
         is_bound: bool,
     }
 
     impl ShadowMap {
         pub fn new() -> ShadowMap {
             let mut fbo = 0;
-            let mut tex_id = 0;
+            let texture = Texture::new(TextureType::CubeMap, Some(DIMENSIONS));
             let dimensions = (DIMENSIONS.0, DIMENSIONS.1);
 
             unsafe {
                 gl::GenFramebuffers(1, &mut fbo);
 
-                gl::GenTextures(1, &mut tex_id);
-                gl::BindTexture(gl::TEXTURE_CUBE_MAP, tex_id);
-
-                for layer in CUBE_MAP_LAYERS.iter() {
-                    gl::TexImage2D(*layer, 0, gl::DEPTH_COMPONENT32 as i32,
-                                   dimensions.0 as i32,
-                                   dimensions.1 as i32,
-                                   0, gl::DEPTH_COMPONENT, gl::FLOAT, ptr::null());
-                }
-                gl::TexParameteri(gl::TEXTURE_CUBE_MAP, gl::TEXTURE_MIN_FILTER,
-                                  gl::NEAREST as i32);
-                gl::TexParameteri(gl::TEXTURE_CUBE_MAP, gl::TEXTURE_MAG_FILTER,
-                                  gl::NEAREST as i32);
-                gl::TexParameteri(gl::TEXTURE_CUBE_MAP, gl::TEXTURE_WRAP_S,
-                                  gl::CLAMP_TO_EDGE as i32);
-                gl::TexParameteri(gl::TEXTURE_CUBE_MAP, gl::TEXTURE_WRAP_T,
-                                  gl::CLAMP_TO_EDGE as i32);
-                gl::TexParameteri(gl::TEXTURE_CUBE_MAP, gl::TEXTURE_WRAP_R,
-                                  gl::CLAMP_TO_EDGE as i32);
-
                 gl::BindFramebuffer(gl::FRAMEBUFFER, fbo);
                 gl::FramebufferTexture(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT,
-                                       tex_id, 0);
+                                       texture.id(), 0);
                 // No color output in the bound framebuffer, only depth.
                 gl::DrawBuffer(gl::NONE);
                 gl::ReadBuffer(gl::NONE);
@@ -140,13 +112,14 @@ pub mod shadow_map {
             }
             ShadowMap {
                 fbo,
-                tex_id,
+                texture,
                 dimensions,
+                z_range: Z_RANGE,
                 is_bound: false,
             }
         }
 
-        pub fn bind(&mut self, light_pos: Point3, shader: &mut ShaderProgram) {
+        pub fn begin_pass(&mut self, light_pos: Point3, shader: &mut ShaderProgram) {
             if self.is_bound {
                 panic!("Attempt to bind bound shadow map");
             }
@@ -166,11 +139,9 @@ pub mod shadow_map {
                 uniforms.send_matrix_4fv(&format!("depth_transforms[{}]", i),
                                          depth_transforms[i]);
             }
-            uniforms.send_1f("far_plane", FAR_PLANE);
-            uniforms.send_3f("light_pos", light_pos.to_vec());
         }
 
-        pub fn unbind(&mut self, display: &Display) {
+        pub fn end_pass(&mut self, display: &Display) {
             if !self.is_bound {
                 panic!("Attempt to unbind unbound shadow map");
             }
@@ -179,14 +150,23 @@ pub mod shadow_map {
             unsafe {
                 gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
                 let dims = display.gl_window().get_inner_size().unwrap();
-                gl::Viewport(0, 0, dims.0 as i32, dims.1 as i32);
+                if cfg!(target_os = "macos") {
+                    // TODO: Why is the viewport 2x too small on Mac if you use inner size?
+                    gl::Viewport(0, 0, dims.0 as i32 * 2, dims.1 as i32 * 2);
+                } else {
+                    gl::Viewport(0, 0, dims.0 as i32, dims.1 as i32);
+                }
             }
+        }
+
+        pub fn bind_and_send(&self, uniform_name: &str, uniforms: &mut ProgramUniforms) {
+            self.texture.bind_and_send(uniform_name, uniforms);
         }
 
         fn depth_transforms(&self, light_pos: Point3) -> [Matrix4; 6] {
             let aspect_ratio = self.dimensions.0 as f32 / self.dimensions.1 as f32;
             let depth_projection = cgmath::perspective(cgmath::Rad(FOV), aspect_ratio,
-                                                       NEAR_PLANE, FAR_PLANE);
+                                                       self.z_range.0, self.z_range.1);
             [
                 // Positive X
                 depth_projection * Matrix4::look_at(
@@ -197,20 +177,20 @@ pub mod shadow_map {
                 // Negative X
                 depth_projection * Matrix4::look_at(
                     light_pos,
-                    light_pos + Vector3::new(-11.0, 0.0, 0.0),
+                    light_pos + Vector3::new(-1.0, 0.0, 0.0),
                     Vector3::new(0.0, -1.0, 0.0),
                 ),
                 // Positive Y
                 depth_projection * Matrix4::look_at(
                     light_pos,
                     light_pos + Vector3::new(0.0, 1.0, 0.0),
-                    Vector3::new(0.0, -1.0, 0.0),
+                    Vector3::new(0.0, 0.0, 1.0),
                 ),
                 // Negative Y
                 depth_projection * Matrix4::look_at(
                     light_pos,
                     light_pos + Vector3::new(0.0, -1.0, 0.0),
-                    Vector3::new(0.0, -1.0, 0.0),
+                    Vector3::new(0.0, 0.0, -1.0),
                 ),
                 // Positive Z
                 depth_projection * Matrix4::look_at(
@@ -225,6 +205,10 @@ pub mod shadow_map {
                     Vector3::new(0.0, -1.0, 0.0),
                 ),
             ]
+        }
+
+        pub fn z_range(&self) -> (f32, f32) {
+            self.z_range
         }
     }
 }

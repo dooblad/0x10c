@@ -1,4 +1,4 @@
-#version 150
+#version 330 core
 
 uniform mat4 projection_matrix;
 uniform mat4 view_matrix;
@@ -13,7 +13,6 @@ out vec3 world_norm;
 out vec2 frag_tex_coord;
 
 void main() {
-    mat4 modelview_matrix = view_matrix * model_matrix;
     // Use the inverse transpose to preserve normal directions in the presence of
     // non-uniform scaling.
     mat3 normal_matrix = transpose(inverse(mat3(model_matrix)));
@@ -22,8 +21,8 @@ void main() {
     world_pos = vec3(model_matrix * vec4(position, 1.0));
     world_norm = normalize(normal_matrix * normal);
 
-    // Interpolate UV.
+    // Interpolate UV coords.
     frag_tex_coord = tex_coord;
 
-    gl_Position = projection_matrix * modelview_matrix * vec4(position, 1.0);
+    gl_Position = projection_matrix * view_matrix * model_matrix * vec4(position, 1.0);
 }

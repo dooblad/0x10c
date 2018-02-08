@@ -47,7 +47,6 @@ impl Game {
 
         let event_handler = &mut self.event_handler;
         loop {
-            event_handler.tick();
             if event_handler.close_requested() {
                 break;
             }
@@ -60,6 +59,7 @@ impl Game {
             while accumulator >= fixed_time_stamp {
                 accumulator -= fixed_time_stamp;
 
+                event_handler.tick();
                 self.current_state.tick(&event_handler);
                 self.current_state.render();
             }

@@ -8,8 +8,8 @@ const vec3 emissive_color = vec3(0.0, 0.0, 0.0);
 
 // Light Properties
 uniform vec3 light_position;
-const vec3 light_ambient = vec3(0.1, 0.1, 0.25);
-const vec3 light_diffuse = vec3(0.3, 0.3, 1.0);
+const vec3 light_ambient = vec3(0.1, 0.1, 0.3);
+const vec3 light_diffuse = vec3(1.0, 0.8, 0.5);
 // Order: [const, linear, quadratic]
 const vec3 light_atten_coeffs = vec3(0.01, 0.1, 0.01);
 
@@ -56,8 +56,9 @@ void main() {
     float r = length(light_position - world_pos);
 
     float fa_denom = light_atten_coeffs[0];
+    // Only use constant + linear attenuation.
+    // TODO: Do we ever want quadratic attenutation?
     fa_denom += r * light_atten_coeffs[1];
-    // fa_denom += r * r * light_atten_coeffs[2];
     if (fa_denom == 0.0) {
         fa_denom = 0.01;
     }

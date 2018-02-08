@@ -25,18 +25,7 @@ impl PixelQuad {
         assert!(dimensions.0 > 0);
         assert!(dimensions.1 > 0);
         assert!(size > 0.0);
-        let mut pixels = vec![0; (4 * dimensions.0 * dimensions.1) as usize];
-        for i in 0..pixels.len() {
-            if i % 4 == 0 {
-                pixels[i] = 0x42;
-            } else if i % 4 == 1 {
-                pixels[i] = 0x86;
-            } else if i % 4 == 2 {
-                pixels[i] = 0xf4;
-            } else if i % 4 == 3 {
-                pixels[i] = 0xff;
-            }
-        }
+        let pixels = vec![0; (4 * dimensions.0 * dimensions.1) as usize];
         let diffuse_texture = Self::gen_texture(dimensions, &pixels);
         let mesh = Self::gen_mesh(dimensions, size, diffuse_texture);
         PixelQuad {

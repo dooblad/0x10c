@@ -10,7 +10,7 @@ use util::math::Point3;
 use world::Renderables;
 
 
-const LIGHT_POSITION: Point3 = Point3 { x: 0.0, y: 3.0, z: 2.0 };
+const LIGHT_POSITION: Point3 = Point3 { x: 0.0, y: 5.0, z: 2.0 };
 const DEBUG: bool = false;
 
 
@@ -68,7 +68,7 @@ impl<'a> RenderingContext<'a> {
             return;
         }
         match self.shader_stack.pop() {
-            Some(p) => self.shaders.get(&p).unwrap().bind(),
+            Some(p) => self.bind_shader(p),
             None => panic!("No shader to pop"),
         }
     }

@@ -13,7 +13,7 @@ use hardware::lem::Lem;
 use util::collide::Collide;
 use util::math::Point3;
 
-use self::collidable::{cube, rect};
+use self::collidable::{cube, obj, rect};
 
 
 pub struct World {
@@ -76,6 +76,12 @@ impl World {
             x: 0.0,
             y: 12.5,
             z: -25.0,
+        })));
+
+        collidables.push(Box::new(obj::new("res/globe.obj", Point3 {
+            x: 7.0,
+            y: 2.0,
+            z: 0.0,
         })));
 
         let mut entities: Vec<Box<Entity>> = Vec::new();

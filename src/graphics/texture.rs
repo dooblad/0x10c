@@ -1,6 +1,8 @@
+
 use gl;
 use gl::types::*;
 use image;
+use image::RgbaImage;
 use std::fs::File;
 use std::io::BufReader;
 use std::{mem, ptr};
@@ -96,8 +98,14 @@ impl Texture {
         }
     }
 
+    /// Generates a 1x1 white texture.
+    pub fn empty() -> Texture {
+        const WHITE_PIXELS: [u8; 4] = [0xff, 0xff, 0xff, 0xff];
+        Texture::from_image(RgbaImage::from_raw(1, 1, WHITE_PIXELS.to_vec()).unwrap())
+    }
+
     /// Generates a diffuse texture from `image`.
-    pub fn from_image(image: image::RgbaImage) -> Texture {
+    pub fn from_image(image: RgbaImage) -> Texture {
         let texture = Texture::new(TextureType::Diffuse, None);
         let bind_target = texture.texture_type().bind_target();
         unsafe {
@@ -110,7 +118,7 @@ impl Texture {
         texture
     }
 
-    pub fn update(&mut self, image: image::RgbaImage) {
+    pub fn update(&mut self, image: RgbaImage) {
         if self.texture_type != TextureType::Diffuse {
             panic!("Can't use this method for \"{:?}\"", self.texture_type);
         }
@@ -124,20 +132,10 @@ impl Texture {
     }
 
     pub fn bind_and_send(&self, uniform_name: &str, uniforms: &mut ProgramUniforms) {
-        use self::TextureType::*;
-
         unsafe {
             gl::ActiveTexture(self.texture_type.texture_unit());
             gl::BindTexture(self.texture_type.bind_target(), self.id);
             uniforms.send_1i(uniform_name, self.texture_type.texture_index());
-        }
-        match self.texture_type {
-            Diffuse => {
-                // Currently, not every mesh needs a diffuse texture, so we send a boolean to indicate
-                // that we're using a texture.
-                uniforms.send_1i("use_texture", 1);
-            },
-            CubeMap => (),
         }
     }
 

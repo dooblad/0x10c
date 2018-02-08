@@ -43,6 +43,8 @@ pub struct Mesh {
     tex_coords: Option<VertexArray>,
     model_matrix: Matrix4<GLfloat>,
     diffuse_texture: Option<Texture>,
+    // Need this for when we bind an empty texture.
+    textured: bool,
 }
 
 impl Mesh {
@@ -51,6 +53,8 @@ impl Mesh {
                normals: Option<Vec<GLfloat>>,
                tex_coords: Option<Vec<GLfloat>>,
                diffuse_texture: Option<Texture>) -> Mesh {
+        assert_eq!(tex_coords.is_some(), diffuse_texture.is_some());
+
         let mut vao_id = 0;
 
         let p;
@@ -90,6 +94,21 @@ impl Mesh {
             gl::BindVertexArray(0);
         }
 
+        // TODO: There has to be a better way to do this.
+        // Use a white texture if no texture is given.  This way we can use the same
+        // shader for textured and untextured objects.
+        let textured;
+        let diffuse_texture = match diffuse_texture {
+            Some(dt) => {
+                textured = true;
+                Some(dt)
+            },
+            None => {
+                textured = false;
+                Some(Texture::empty())
+            },
+        };
+
         Mesh {
             vao_id,
             positions: p,
@@ -98,6 +117,7 @@ impl Mesh {
             tex_coords: t,
             model_matrix: Matrix4::identity(),
             diffuse_texture,
+            textured,
         }
     }
 
@@ -210,13 +230,15 @@ impl Render for Mesh {
                 gl::EnableVertexAttribArray(AttribIndices::TexCoords as GLuint);
             }
 
-            // Setup texturing.
             if let Some(ref dt) = self.diffuse_texture {
                 dt.bind_and_send("diffuse_texture", uniforms);
+            }
+            // If no texture, just use a flat color.
+            uniforms.send_3fv("diffuse_color", Vector3::new(0.5, 0.5, 0.5));
+            if self.textured {
+                uniforms.send_1i("use_texture", 1);
             } else {
-                // If no texture, just use a flat color.
                 uniforms.send_1i("use_texture", 0);
-                uniforms.send_3fv("diffuse_color", Vector3::new(0.5, 0.5, 0.5));
             }
 
             // Set model matrix.

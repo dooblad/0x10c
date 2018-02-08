@@ -222,9 +222,6 @@ impl ShaderProgram {
     pub fn bind(&self) {
         unsafe {
             gl::UseProgram(self.id);
-            // TODO: Is this line necessary?
-            gl::BindFragDataLocation(self.id, 0,
-                                     CString::new("frag_color").unwrap().as_ptr());
         }
     }
 

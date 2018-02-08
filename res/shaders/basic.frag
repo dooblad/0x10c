@@ -23,11 +23,15 @@ in vec2 frag_tex_coord;
 
 out vec4 frag_color;
 
+/*
+ * Returns how much to multiply the diffuse factor by, depending on whether the object is
+ * in a shadow or not.
+ */
 float shadow_factor(vec3 frag_pos) {
     vec3 frag_to_light = frag_pos - light_position;
     float current_depth = length(frag_to_light);
     if (current_depth > far_plane) {
-        // Out of range of cube map.  In this case, default to no shadow.
+        // Out of range of cube map.  In this case, default to shadow.
         return 0.0;
     }
     float bias = 0.1;
@@ -35,10 +39,10 @@ float shadow_factor(vec3 frag_pos) {
     closest_depth *= far_plane;
     if (current_depth - bias > closest_depth) {
         // In shadow
-        return 1.0;
+        return 0.5;
     } else {
         // Not in shadow
-        return 0.0;
+        return 1.0;
     }
 }
 
@@ -72,7 +76,7 @@ void main() {
 
     float shadow = shadow_factor(world_pos);
 
-    vec3 lighting = emissive_color + (ambient + (1.0 - shadow) * diffuse);
+    vec3 lighting = emissive_color + (ambient + shadow * diffuse);
 
     frag_color = vec4(lighting, 1.0);
 }

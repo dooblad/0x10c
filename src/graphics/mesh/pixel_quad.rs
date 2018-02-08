@@ -5,7 +5,6 @@ use graphics::mesh::util::*;
 use graphics::Render;
 use graphics::renderer::RenderingContext;
 use graphics::texture::Texture;
-use util::math::Point3;
 
 /// Stores an array of pixels that, when updated, generates a texture that is then drawn
 /// as a quad with the same aspect ratio as the texture.
@@ -22,7 +21,7 @@ impl PixelQuad {
     ///
     /// * `size` - A size of 1.0 constrains the width to be 1.0 and the height to be
     ///            constrained by the width and the aspect ratio.
-    pub fn new(dimensions: (u32, u32), size: f32, position: Point3) -> PixelQuad {
+    pub fn new(dimensions: (u32, u32), size: f32) -> PixelQuad {
         assert!(dimensions.0 > 0);
         assert!(dimensions.1 > 0);
         assert!(size > 0.0);
@@ -39,8 +38,7 @@ impl PixelQuad {
             }
         }
         let diffuse_texture = Self::gen_texture(dimensions, &pixels);
-        let mut mesh = Self::gen_mesh(dimensions, size, diffuse_texture);
-        mesh.move_to(position);
+        let mesh = Self::gen_mesh(dimensions, size, diffuse_texture);
         PixelQuad {
             mesh,
             dimensions,
@@ -79,7 +77,7 @@ impl PixelQuad {
         ];
 
         let positions = expand_indices(&base_positions, &indices);
-        let normals = generate_normals(&positions);
+        let normals = gen_normals(&positions);
 
         let tex_coords = vec![
             // Lower right triangle
@@ -92,7 +90,11 @@ impl PixelQuad {
             0.0, 1.0,
         ];
 
-        Mesh::new(positions, Some(normals), Some(tex_coords), Some(diffuse_texture))
+        Mesh::new(positions, None, Some(normals), Some(tex_coords), Some(diffuse_texture))
+    }
+
+    pub fn mesh(&mut self) -> &mut Mesh {
+        &mut self.mesh
     }
 
     pub fn dimensions(&self) -> (u32, u32) {

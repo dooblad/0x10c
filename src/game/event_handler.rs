@@ -113,6 +113,8 @@ impl EventHandler {
         return self.pressed_keys.contains(key);
     }
 
+    // TODO: Not working correctly.  Spamming events.  Try putting input on a separate
+    // thread.
     pub fn is_key_pressed(&self, key: &glutin::VirtualKeyCode) -> bool {
         return self.pressed_keys.contains(key) && !self.last_pressed_keys.contains(key);
     }

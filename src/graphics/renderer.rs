@@ -1,4 +1,3 @@
-use cgmath::Vector3;
 use cgmath::EuclideanSpace;
 use gl;
 use std::collections::HashMap;
@@ -11,7 +10,7 @@ use util::math::Point3;
 use world::Renderables;
 
 
-const LIGHT_POSITION: Point3 = Point3 {x: 0.0, y: 5.0, z: 0.0};
+const LIGHT_POSITION: Point3 = Point3 { x: 0.0, y: 3.0, z: 2.0 };
 const DEBUG: bool = false;
 
 
@@ -98,7 +97,6 @@ pub struct Renderer {
     shadow_map: ShadowMap,
     light_pos: Point3,
     display: graphics::Display,
-    counter: u32,
 }
 
 impl Renderer {
@@ -151,7 +149,6 @@ impl Renderer {
             shadow_map,
             light_pos: LIGHT_POSITION,
             display,
-            counter: 0,
         }
     }
 
@@ -228,9 +225,6 @@ impl Renderer {
     }
 
     pub fn render(&mut self, mut renderables: Renderables, camera: &Camera) {
-        self.light_pos.x = (self.counter as f32 / 50.0f32).sin() * 3.0;
-        self.light_pos.z = (self.counter as f32 / 50.0f32).cos() * 3.0;
-
         self.start_frame(camera);
 
         // Populate shadow map.
@@ -239,7 +233,5 @@ impl Renderer {
         self.main_pass(&mut renderables, camera);
 
         self.end_frame();
-
-        self.counter += 1;
     }
 }

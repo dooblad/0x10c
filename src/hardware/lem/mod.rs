@@ -2,14 +2,16 @@ use entity::Entity;
 use game::event_handler::EventHandler;
 use graphics::Render;
 use graphics::renderer::RenderingContext;
+use graphics::mesh::Mesh;
 use graphics::mesh::pixel_quad::PixelQuad;
+use graphics::mesh::obj;
 use hardware::dcpu::Dcpu;
 use hardware::dcpu::assembler;
 use hardware::keyboard;
 use hardware::keyboard::Keyboard;
-use util::collide::{AABB, Range};
+use util::collide::AABB;
 use util::collide::Collide;
-use util::math::Point3;
+use util::math::{Point3, Vector3};
 use world::EntitySlice;
 
 const SCREEN_SIZE_IN_PIXELS: (u16, u16) = (128, 96);
@@ -19,7 +21,8 @@ const CELL_SIZE_IN_PIXELS: (u16, u16) = (4, 8);
 const BLINK_CYCLE_LENGTH: u32 = 60;
 
 // Scale factor for the size of the screen.
-const SCREEN_SCALE: f32 = 2.0;
+const SCREEN_SCALE: f32 = 1.0;
+const SCREEN_OFFSET: (f32, f32, f32) = (0.0, 3.0, 0.6);
 const COLOR_PALETTE: [[u8; 3]; 16] = [
     [20, 12, 28],
     [68, 36, 52],
@@ -532,6 +535,7 @@ pub struct CellConfig {
 pub struct Lem {
     aabb: AABB,
     screen: PixelQuad,
+    terminal: Mesh,
     blink_timer: u32,
     // TODO: Monitor's don't own the CPU or keyboard.
     dcpu: Dcpu,
@@ -540,12 +544,6 @@ pub struct Lem {
 
 impl Lem {
     pub fn new(position: Point3) -> Lem {
-        let s = SCREEN_SCALE / 2.0;
-        let bounds = [
-            Range { min: -s, max: s },
-            Range { min: -s, max: s },
-            Range { min: -0.05, max: 0.05 },
-        ];
         let mut dcpu = Dcpu::new();
         // TODO: Make instructions lowercase (easier typing, yo).
         let program = assembler::assemble(
@@ -641,12 +639,24 @@ JSR set_blink
             }
         };
 
+        // TODO: Have some sort of resource manager that clones mesh instances, rather
+        // than doing file IO every time.
+        let mut terminal = obj::new("res/terminal.obj");
+        terminal.move_to(position);
+
+        let mut screen = PixelQuad::new(
+            (SCREEN_SIZE_IN_PIXELS.0 as u32, SCREEN_SIZE_IN_PIXELS.1 as u32),
+            SCREEN_SCALE);
+        screen.mesh().move_to(position + Vector3 {
+            x: SCREEN_OFFSET.0,
+            y: SCREEN_OFFSET.1,
+            z: SCREEN_OFFSET.2,
+        });
 
         Lem {
-            aabb: AABB::new(bounds, position),
-            screen: PixelQuad::new(
-                (SCREEN_SIZE_IN_PIXELS.0 as u32, SCREEN_SIZE_IN_PIXELS.1 as u32),
-                SCREEN_SCALE, position),
+            aabb: AABB::new(terminal.bounds(), position),
+            screen,
+            terminal,
             blink_timer: 0,
             dcpu,
             keyboard: Keyboard::new(),
@@ -739,6 +749,7 @@ impl Render for Lem {
         context.bind_shader(String::from("unlit"));
         self.screen.render(context);
         context.pop_shader_state();
+        self.terminal.render(context);
     }
 }
 

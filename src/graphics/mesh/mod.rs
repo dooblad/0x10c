@@ -1,4 +1,5 @@
 pub mod cube;
+pub mod obj;
 pub mod rect;
 pub mod pixel_quad;
 mod util;
@@ -13,10 +14,16 @@ use std::ptr;
 use graphics::Render;
 use graphics::renderer::RenderingContext;
 use graphics::texture::Texture;
+use util::collide::Range;
 
 struct VertexArray {
     pub vbo_id: GLuint,
     pub data: Vec<GLfloat>,
+}
+
+struct IndexArray {
+    pub vbo_id: GLuint,
+    pub data: Vec<u32>,
 }
 
 /// Used to establish and utilize attribute location conventions.
@@ -31,6 +38,7 @@ pub enum AttribIndices {
 pub struct Mesh {
     vao_id: GLuint,
     positions: VertexArray,
+    indices: Option<IndexArray>,
     normals: Option<VertexArray>,
     tex_coords: Option<VertexArray>,
     model_matrix: Matrix4<GLfloat>,
@@ -39,12 +47,14 @@ pub struct Mesh {
 
 impl Mesh {
     pub fn new(positions: Vec<GLfloat>,
+               indices: Option<Vec<u32>>,
                normals: Option<Vec<GLfloat>>,
                tex_coords: Option<Vec<GLfloat>>,
                diffuse_texture: Option<Texture>) -> Mesh {
         let mut vao_id = 0;
 
         let p;
+        let mut i = None;
         let mut n = None;
         let mut t = None;
 
@@ -56,6 +66,12 @@ impl Mesh {
                 vbo_id: Self::gen_vbo(AttribIndices::Positions as GLuint, 3, &positions),
                 data: positions
             };
+            if let Some(ii) = indices {
+                i = Some(IndexArray {
+                    vbo_id: Self::gen_index_vbo(&ii),
+                    data: ii,
+                });
+            }
             if let Some(nn) = normals {
                 n = Some(VertexArray {
                     vbo_id: Self::gen_vbo(AttribIndices::Normals as GLuint, 3, &nn),
@@ -69,6 +85,7 @@ impl Mesh {
                 });
             }
 
+            // Unbind everything.
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             gl::BindVertexArray(0);
         }
@@ -76,6 +93,7 @@ impl Mesh {
         Mesh {
             vao_id,
             positions: p,
+            indices: i,
             normals: n,
             tex_coords: t,
             model_matrix: Matrix4::identity(),
@@ -129,6 +147,43 @@ impl Mesh {
         vbo_id
     }
 
+    unsafe fn gen_index_vbo(indices: &Vec<u32>) -> u32 {
+        let mut vbo_id = 0;
+        gl::GenBuffers(1, &mut vbo_id);
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, vbo_id);
+        gl::BufferData(
+            gl::ELEMENT_ARRAY_BUFFER,
+            (indices.len() * mem::size_of::<u32>()) as GLsizeiptr,
+            mem::transmute(&indices[0]),
+            gl::STATIC_DRAW,
+        );
+        vbo_id
+    }
+
+    /// Finds extrema in this mesh's positions (useful for creating AABBs).
+    pub fn bounds(&self) -> [Range; 3] {
+        let positions = &self.positions.data;
+        let mut result = [
+            Range { min: positions[0], max: positions[0] },
+            Range { min: positions[1], max: positions[1] },
+            Range { min: positions[2], max: positions[2] },
+        ];
+        for i in 0..(positions.len() / 3) {
+            for j in 0..3 {
+                if positions[i*3 + j] < result[j].min {
+                    result[j].min = positions[i*3 + j];
+                } else if positions[i*3 + j] > result[j].max {
+                    result[j].max = positions[i*3 + j];
+                }
+            }
+        }
+        result
+    }
+
+    pub fn positions(&self) -> &Vec<GLfloat> {
+        &self.positions.data
+    }
+
     pub fn diffuse_texture(&mut self) -> &mut Option<Texture> {
         &mut self.diffuse_texture
     }
@@ -167,8 +222,18 @@ impl Render for Mesh {
             // Set model matrix.
             uniforms.send_matrix_4fv("model_matrix", self.model_matrix);
 
-            // Draw.
-            gl::DrawArrays(gl::TRIANGLES, 0, (self.positions.data.len() as GLsizei) / 3);
+            match self.indices {
+                Some(ref i) => {
+                    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, i.vbo_id);
+                    gl::DrawElements(gl::TRIANGLES, i.data.len() as i32, gl::UNSIGNED_INT,
+                                     ptr::null());
+                    gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
+                },
+                None => {
+                    // Draw without indexing.
+                    gl::DrawArrays(gl::TRIANGLES, 0, (self.positions.data.len() as GLsizei) / 3);
+                }
+            }
 
             // Disable vertex attributes.
             gl::DisableVertexAttribArray(AttribIndices::Positions as GLuint);

@@ -9,7 +9,8 @@ use entity;
 use graphics::Display;
 use world;
 
-const WINDOW_DIMENSIONS: (u32, u32) = (800, 500);
+const WINDOW_DIMENSIONS: (u32, u32) = (640, 480);
+const VSYNC: bool = true;
 static WINDOW_TITLE: &'static str = "0x10c";
 
 pub struct Game {
@@ -23,7 +24,7 @@ impl Game {
         let window = glutin::WindowBuilder::new()
             .with_dimensions(WINDOW_DIMENSIONS.0, WINDOW_DIMENSIONS.1)
             .with_title(WINDOW_TITLE);
-        let context = glutin::ContextBuilder::new();
+        let context = glutin::ContextBuilder::new().with_vsync(VSYNC);
         let display = Display::new(window, context, &events_loop).unwrap();
 
         {

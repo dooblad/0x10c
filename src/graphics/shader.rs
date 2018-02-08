@@ -139,19 +139,11 @@ impl ProgramUniforms {
     pub fn send_matrix_4fv(&mut self, name: &str, data: Matrix4<GLfloat>) {
         unsafe { gl::UniformMatrix4fv(self.get_location(name), 1, gl::FALSE, data.as_ptr()); }
     }
-
-    /*
-    TODO: These?
-    pub fn send_matrix_2x3fv(&mut self, name: &str, data: Matrix4<GLfloat>);
-    pub fn send_matrix_3x2fv(&mut self, name: &str, data: Matrix4<GLfloat>);
-    pub fn send_matrix_2x4fv(&mut self, name: &str, data: Matrix4<GLfloat>);
-    pub fn send_matrix_4x2fv(&mut self, name: &str, data: Matrix4<GLfloat>);
-    pub fn send_matrix_3x4fv(&mut self, name: &str, data: Matrix4<GLfloat>);
-    pub fn send_matrix_4x3fv(&mut self, name: &str, data: Matrix4<GLfloat>);
-    */
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+pub const SHADER_DIR: &str = "res/shaders";
 
 /// Describes the structure of the shader pipeline (e.g., whether there is a geometry
 /// shader).
@@ -178,9 +170,9 @@ impl From<ShaderConfig> for ShaderSource {
         use self::ShaderType::*;
 
         let vertex_shader = read_file(
-            &format!("shaders/{}.vert", name)).unwrap();
+            &format!("{}/{}.vert", SHADER_DIR, name)).unwrap();
         let fragment_shader = read_file(
-            &format!("shaders/{}.frag", name)).unwrap();
+            &format!("{}/{}.frag", SHADER_DIR, name)).unwrap();
         match shader_type {
             VertFrag => {
                 ShaderSource {
@@ -194,7 +186,7 @@ impl From<ShaderConfig> for ShaderSource {
                     vertex_shader,
                     fragment_shader,
                     geometry_shader: Some(read_file(
-                        &format!("shaders/{}.geom", name)).unwrap()),
+                        &format!("{}/{}.geom", SHADER_DIR, name)).unwrap()),
                 }
             },
         }

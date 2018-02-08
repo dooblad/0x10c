@@ -9,7 +9,7 @@ pub fn new(width: f32, height: f32, depth: f32) -> Mesh {
     let w = width / 2.0;
     let h = height / 2.0;
     let d = depth / 2.0;
-    let base_positions = vec![
+    let positions = vec![
         // Front
         -w, -h, d,
         w, -h, d,
@@ -22,7 +22,7 @@ pub fn new(width: f32, height: f32, depth: f32) -> Mesh {
         -w, h, -d,
     ];
 
-    let indices = vec![
+    let indices: Vec<u32> = vec![
         // Front
         0, 1, 2,
         0, 2, 3,
@@ -43,9 +43,10 @@ pub fn new(width: f32, height: f32, depth: f32) -> Mesh {
         4, 1, 0,
     ];
 
-    let positions = expand_indices(&base_positions, &indices);
-    let normals = generate_normals(&positions);
+    let positions = expand_indices(&positions, &indices);
+    let normals = gen_normals(&positions);
 
+    /*
     let base_tex_coords = [
         // Lower right triangle
         0.0, 0.0,
@@ -61,6 +62,7 @@ pub fn new(width: f32, height: f32, depth: f32) -> Mesh {
     for i in 0..num_tex_coords {
         tex_coords.push(base_tex_coords[i % base_tex_coords.len()]);
     }
+    */
 
-    Mesh::new(positions, Some(normals), None, None)
+    Mesh::new(positions, None, Some(normals), None, None)
 }

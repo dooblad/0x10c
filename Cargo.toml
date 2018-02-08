@@ -4,10 +4,11 @@ version = "0.1.0"
 authors = ["doobs"]
 
 [dependencies]
-gl = "0.6.0"
-glutin = "0.9"
 cgmath = "0.15"
 genmesh = "0.4"
+gl = "0.6.0"
+glutin = "0.9"
 image = "0.15"
 obj = { version = "0.5", features = ["usegenmesh"] }
 rand = "0.3"
+tobj = "0.1.6"

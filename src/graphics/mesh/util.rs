@@ -2,6 +2,7 @@ use gl::types::GLfloat;
 
 use util::math::Point3;
 
+
 pub fn expand_indices(base_positions: &Vec<GLfloat>, indices: &Vec<u32>) -> Vec<GLfloat> {
     let mut positions: Vec<GLfloat> = Vec::with_capacity(indices.len() * 3);
     for i in 0..indices.len() {

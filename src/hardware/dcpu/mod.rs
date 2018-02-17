@@ -253,10 +253,10 @@ mod tests {
     #[test]
     fn immediate_finish() {
         let program_src = "\
-SET A, 0x0
-SET B, 0x1
-SET C, 0x2
-:finish SET PC, finish
+set A, 0x0
+set B, 0x1
+set C, 0x2
+:finish set PC, finish
         ";
         run_program(program_src);
     }
@@ -265,13 +265,13 @@ SET C, 0x2
     fn simple() {
         let program_src = "\
 ; Test that comments work.
-SET A, 0x30 ; Test that comments work on the same line as code.
-SET [0x1000], 0x20
-SUB A, [0x1000]
-IFN A, 0x10
-SET A, 0xff
+set A, 0x30 ; Test that comments work on the same line as code.
+set [0x1000], 0x20
+sub A, [0x1000]
+ifn A, 0x10
+set A, 0xff
 
-:finish SET PC, finish
+:finish set PC, finish
         ";
         run_program(program_src);
     }
@@ -279,13 +279,13 @@ SET A, 0xff
     #[test]
     fn label_loop() {
         let program_src = "\
-SET A, 0x10
+set A, 0x10
 :loop
-SUB A, 1
-IFN A, 0
-SET PC, loop
+sub A, 1
+ifn A, 0
+set PC, loop
 
-:finish SET PC, finish
+:finish set PC, finish
         ";
         run_program(program_src);
     }

@@ -5,7 +5,7 @@ pub mod rect;
 use graphics::Render;
 use graphics::mesh::Mesh;
 use graphics::renderer::RenderingContext;
-use util::collide::AABB;
+use util::collide::aabb::AABB;
 use util::collide::Collide;
 use util::math::Point3;
 

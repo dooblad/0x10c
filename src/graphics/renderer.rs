@@ -10,7 +10,7 @@ use util::math::Point3;
 use world::Renderables;
 
 
-const LIGHT_POSITION: Point3 = Point3 { x: 0.0, y: 5.0, z: 2.0 };
+const LIGHT_POSITION: Point3 = Point3 { x: 3.0, y: 5.0, z: 2.0 };
 const DEBUG: bool = false;
 
 

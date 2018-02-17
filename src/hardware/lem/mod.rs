@@ -9,7 +9,7 @@ use hardware::dcpu::Dcpu;
 use hardware::dcpu::assembler;
 use hardware::keyboard;
 use hardware::keyboard::Keyboard;
-use util::collide::AABB;
+use util::collide::aabb::AABB;
 use util::collide::Collide;
 use util::math::{Point3, Vector3};
 use world::EntitySlice;
@@ -22,7 +22,7 @@ const BLINK_CYCLE_LENGTH: u32 = 60;
 
 // Scale factor for the size of the screen.
 const SCREEN_SCALE: f32 = 1.0;
-const SCREEN_OFFSET: (f32, f32, f32) = (0.0, 3.0, 0.6);
+const SCREEN_OFFSET: (f32, f32, f32) = (0.0, 3.0, 0.645);
 const COLOR_PALETTE: [[u8; 3]; 16] = [
     [20, 12, 28],
     [68, 36, 52],
@@ -549,84 +549,97 @@ impl Lem {
         let program = assembler::assemble(
 "\
 ; Initial screen coord
-SET I, 0
+set I, 0
 ; FG color idx
-SET X, 15
+set X, 15
 ; BG color idx
-SET Y, 0
+set Y, 0
 ; Character idx
-SET A, 0
+set A, 0
 
 ; Start by initializing the cursor.
-JSR set_blink
+jsr set_blink
 
 :loop
-  IFE [0x9001], 0
-  SET PC, loop
+  ife [0x9001], 0
+  set PC, loop
 
   ; Read a character.
 
   ; Head idx
-  SET B, [0x9000]
+  set B, [0x9000]
   ; Grab element at head.
-  SET A, [0x9002+B]
+  set A, [0x9002+B]
   ; Update head idx.
-  ADD B, 1
-  MOD B, 16
-  SET [0x9000], B
+  add B, 1
+  mod B, 16
+  set [0x9000], B
   ; Decrement size.
-  SUB [0x9001], 1
+  sub [0x9001], 1
 
   ; Check for a backspace.
-  IFE A, 0x10
-    SET PC, backspace
+  ifn A, 0x10
+    set PC, display_char
+  jsr del_char
+  set PC, loop
 
-  ; Make sure it's in the range [A-Z].
-  IFL A, 0x20
-    SET PC, loop
-  IFG A, 0x7f
-    SET PC, loop
-  ; Map it down to a font index.
-  SUB A, 0x20
+  :display_char
+    ; Make sure it's in the range [A-Z].
+    ifl A, 0x20
+      set PC, loop
+    ifg A, 0x7f
+      set PC, loop
+    ; Map it down to a font index.
+    sub A, 0x20
+    jsr add_char
+    set PC, loop
 
-  JSR add_char
-
-  SET PC, loop
-
-:backspace
-  JSR del_char
-  SET PC, loop
 
 :add_char
-  ; Build monitor cell bits.
-  SET J, 0
-  BOR J, A
-  SHL X, 12
-  BOR J, X
-  SHR X, 12
-  SHL Y, 8
-  BOR J, Y
-  SHR Y, 8
+  ;; Build monitor cell bits.
+  set J, 0
+  bor J, A
+  shl X, 12
+  bor J, X
+  shr X, 12
+  shl Y, 8
+  bor J, Y
+  shr Y, 8
 
-  SET [0x8000+I], J
-  ADD I, 1
-  JSR set_blink
-  SET PC, POP
+  set [0x8000+I], J
+  add I, 1
+  jsr set_blink
+  set PC, POP
+
 
 :del_char
-  IFE I, 0
-  SET PC, loop
-  SET [0x8000+I], 0
-  SUB I, 1
-  JSR set_blink
-  SET PC, POP
+  ife I, 0
+    set PC, POP
+  set [0x8000+I], 0
+  sub I, 1
+  jsr set_blink
+  set PC, POP
+
 
 :set_blink
-  ; Make the cursor blink in its new position.
-  SET J, 1
-  SHL J, 7
-  SET [0x8000+I], J
-  SET PC, POP
+  ;; Make the cursor blink in its new position.
+  set PUSH, J
+  set PUSH, A
+
+  set J, 1
+  shl J, 7
+  set A, [display_start]
+  add A, I
+  set [A], J
+
+  set A, POP
+  set J, POP
+  set PC, POP
+
+
+; DATA SECTION
+:display_start dat 0x8000
+:key_buffer_start dat 0x9000
             "
         );
         match program {

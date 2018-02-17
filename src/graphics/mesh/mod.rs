@@ -2,7 +2,7 @@ pub mod cube;
 pub mod obj;
 pub mod rect;
 pub mod pixel_quad;
-mod util;
+pub mod util;
 
 use cgmath::SquareMatrix;
 use cgmath::{Point3, Vector3, Matrix4};
@@ -14,7 +14,7 @@ use std::ptr;
 use graphics::Render;
 use graphics::renderer::RenderingContext;
 use graphics::texture::Texture;
-use util::collide::Range;
+use util::collide::aabb::Range;
 
 struct VertexArray {
     pub vbo_id: GLuint,

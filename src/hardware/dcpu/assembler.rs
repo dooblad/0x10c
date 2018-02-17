@@ -261,14 +261,14 @@ impl AssemblerContext {
             return None;
         }
 
-        if tokens[0] == "DAT" {
-            // Data lines have different syntax than other instructions.
+        if tokens[0] == "dat" {
+            // Line contains a data instruction.
             match self.process_data_line(tokens, line_num) {
                 Some(d) => Some(LineResult::Data(d)),
                 None => None,
             }
-        } else if tokens[0] == "JSR" {
-            // TODO: Support *all* special instructions.
+        } else if SpecialOp::try_from(tokens[0]).is_some() {
+            // Line contains a special instruction.
             match self.process_special_line(tokens, line_num) {
                 Some(ic) => Some(LineResult::SpecialInstruction(ic)),
                 None => None,
@@ -642,6 +642,7 @@ fn get_base_type(token: &str) -> Result<ValType,String> {
     } else if token == "PICK" {
         Ok(Pick)
     } else if let None = token.find("+") {
+        // TODO: Check against reserved keywords.
         Ok(Label(String::from(token)))
     } else {
         Err(format!("Invalid syntax \"{}\"", token))

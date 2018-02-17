@@ -9,7 +9,7 @@ use graphics::Render;
 use entity::Entity;
 use util::f32::clamp;
 use util::math::{Point3, Vector2, Vector3, Rotation};
-use util::collide::{AABB, Range};
+use util::collide::aabb::{AABB, Range};
 use util::collide::Collide;
 use world::EntitySlice;
 

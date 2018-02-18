@@ -10,7 +10,9 @@ use entity::Entity;
 use util::f32::clamp;
 use util::math::{Point3, Vector2, Vector3, Rotation};
 use util::collide::aabb::{AABB, Range};
+use util::mesh::gen;
 use util::collide::Collide;
+use util::collide::sat::CollisionMesh;
 use world::EntitySlice;
 
 const PLAYER_BOUNDS: [Range; 3] = [
@@ -176,6 +178,35 @@ impl Player {
             self.aabb.translate(mtv);
         }
     }
+
+    // TODO: Add SAT collision everywhere!
+    fn sat_collide(&mut self, velocity_delta: &mut Vector3) {
+        const MTV_DOT_LOWER_BOUND: f32 = 0.1;
+
+        let self_mesh = CollisionMesh::new(gen::cube(3.0),
+                                           Some(self.position().clone()));
+
+        let other_mesh = CollisionMesh::new(gen::tetrahedron(3.0), Some(Point3 {
+            x: 7.0,
+            y: 3.0,
+            z: 0.0,
+        }));
+
+        if let Some(mtv) = self_mesh.collide_with(&other_mesh) {
+            println!("MTV: {:?}", mtv);
+            if mtv.dot(mtv) > MTV_DOT_LOWER_BOUND {
+                // Only correct our velocity when `mtv` is sufficiently large.
+                let normalized_mtv = mtv.normalize();
+                let velocity_correction = Vector3 {
+                    x: -self.velocity.x * normalized_mtv.x,
+                    y: -self.velocity.y * normalized_mtv.y,
+                    z: -self.velocity.z * normalized_mtv.z,
+                };
+                *velocity_delta += velocity_correction;
+            }
+            self.aabb.translate(mtv);
+        }
+    }
 }
 
 impl Entity for Player {
@@ -210,6 +241,9 @@ impl Entity for Player {
             // We want to correct the velocity only after we've used it to translate for the
             // current frame.
             let mut collision_delta = Vector3 { x: 0.0, y: 0.0, z: 0.0 };
+
+            self.sat_collide(&mut collision_delta);
+            self.velocity += collision_delta;
 
             // First, check for collisions with static collidables.
             for collidable in collidables {
@@ -251,5 +285,16 @@ impl Collide for Player {
 }
 
 impl Render for Player {
-    fn render(&mut self, _: &mut renderer::RenderingContext) { }
+    fn render(&mut self, context: &mut renderer::RenderingContext) {
+        use graphics::mesh::tetrahedron;
+
+        // TODO: QUIT RENDERING IT HERE.
+        let mut mesh = tetrahedron::new(3.0);
+        mesh.move_to(Point3 {
+            x: 7.0,
+            y: 3.0,
+            z: 0.0,
+        });
+        mesh.render(context);
+    }
 }

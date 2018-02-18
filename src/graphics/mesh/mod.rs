@@ -1,8 +1,8 @@
 pub mod cube;
 pub mod obj;
 pub mod rect;
+pub mod tetrahedron;
 pub mod pixel_quad;
-pub mod util;
 
 use cgmath::SquareMatrix;
 use cgmath::{Point3, Vector3, Matrix4};

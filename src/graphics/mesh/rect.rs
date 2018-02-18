@@ -1,49 +1,10 @@
 use graphics::mesh::Mesh;
-use graphics::mesh::util::*;
+use util::mesh::gen::rect;
+use util::mesh::gen_normals;
+
 
 pub fn new(width: f32, height: f32, depth: f32) -> Mesh {
-    assert!(width > 0.0);
-    assert!(height > 0.0);
-    assert!(depth > 0.0);
-
-    let w = width / 2.0;
-    let h = height / 2.0;
-    let d = depth / 2.0;
-    let positions = vec![
-        // Front
-        -w, -h, d,
-        w, -h, d,
-        w, h, d,
-        -w, h, d,
-        // Back
-        -w, -h, -d,
-        w, -h, -d,
-        w, h, -d,
-        -w, h, -d,
-    ];
-
-    let indices: Vec<u32> = vec![
-        // Front
-        0, 1, 2,
-        0, 2, 3,
-        // Back
-        5, 4, 7,
-        5, 7, 6,
-        // Left
-        4, 0, 3,
-        4, 3, 7,
-        // Right
-        1, 5, 6,
-        1, 6, 2,
-        // Top
-        3, 2, 6,
-        3, 6, 7,
-        // Bottom
-        4, 5, 1,
-        4, 1, 0,
-    ];
-
-    let positions = expand_indices(&positions, &indices);
+    let positions = rect(width, height, depth);
     let normals = gen_normals(&positions);
 
     /*
@@ -66,3 +27,4 @@ pub fn new(width: f32, height: f32, depth: f32) -> Mesh {
 
     Mesh::new(positions, None, Some(normals), None, None)
 }
+

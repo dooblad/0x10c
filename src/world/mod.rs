@@ -7,6 +7,7 @@ use entity::player::Player;
 use entity::Entity;
 use game::event_handler::EventHandler;
 use graphics::Display;
+use graphics::Render;
 use graphics::renderer::{Renderer, RenderingContext};
 use game::camera::Camera;
 use hardware::lem::Lem;
@@ -79,8 +80,8 @@ impl World {
         })));
 
         collidables.push(Box::new(obj::new("res/globe.obj", Point3 {
-            x: 7.0,
-            y: 2.0,
+            x: 0.0,
+            y: 8.0,
             z: 0.0,
         })));
 
@@ -119,6 +120,7 @@ impl World {
         self.renderer.render(Renderables {
             collidables: &mut self.collidables,
             entities: &mut self.entities,
+            player: &mut self.player,
         }, camera);
     }
 
@@ -133,6 +135,7 @@ impl World {
 pub struct Renderables<'a> {
     pub collidables: &'a mut Vec<Box<Collide>>,
     pub entities: &'a mut Vec<Box<Entity>>,
+    pub player: &'a mut Player,
 }
 
 impl<'a> Renderables<'a> {
@@ -143,6 +146,7 @@ impl<'a> Renderables<'a> {
         for renderable in self.entities.iter_mut() {
             renderable.render(context);
         }
+        self.player.render(context);
     }
 }
 

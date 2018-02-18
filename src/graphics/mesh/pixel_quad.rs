@@ -1,10 +1,11 @@
 use image::RgbaImage;
 
 use graphics::mesh::Mesh;
-use graphics::mesh::util::*;
 use graphics::Render;
 use graphics::renderer::RenderingContext;
 use graphics::texture::Texture;
+use util::mesh::{expand_indices, gen_normals};
+
 
 /// Stores an array of pixels that, when updated, generates a texture that is then drawn
 /// as a quad with the same aspect ratio as the texture.

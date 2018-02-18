@@ -10,4 +10,3 @@ use self::aabb::AABB;
 pub trait Collide : Render {
     fn aabb(&self) -> &AABB;
 }
-

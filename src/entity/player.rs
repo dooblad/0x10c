@@ -29,12 +29,7 @@ const GRAVITY: f32 = 0.02;
 const VELOCITY_DAMPENING_FACTOR: f32 = 0.8;
 
 pub struct Player {
-    // TODO: We need to recreate the player's mesh every frame currently, because
-    // collision meshes are stored as a static collection of vertices without any factored
-    // position.
     collision_mesh: CollisionMesh,
-    projected_pos: Point3,
-    position: Point3,
     velocity: Vector3,
     rotation: Rotation,
     on_ground: bool,
@@ -55,8 +50,6 @@ impl Player {
         let position = Point3 { x: 0.0, y: 4.0, z: 0.0 };
         Player {
             collision_mesh: aabb::new(PLAYER_BOUNDS, position),
-            projected_pos: Point3 { x: 0.0, y: 0.0, z: 0.0 },
-            position,
             velocity: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
             rotation: Rotation {
                 horizontal_angle: 0.0,
@@ -91,7 +84,7 @@ impl Player {
     }
 
     pub fn position(&self) -> &Point3 {
-        &self.position
+        &self.collision_mesh.position()
     }
 
     pub fn velocity(&self) -> &Vector3 {
@@ -177,8 +170,7 @@ impl Player {
     /// # Arguments
     ///
     /// * `velocity_delta` - How much the velocity will change after the collision phase.
-    fn collide<C: ?Sized + Collide>(&mut self, collidable: &C,
-                                    velocity_delta: &mut Vector3) {
+    fn collide<C: ?Sized + Collide>(&mut self, collidable: &C) {
         if let Some(mtv) = self.collision_mesh.collide_with(collidable.collision_mesh()) {
             let x_abs = mtv.x.abs();
             let y_abs = mtv.y.abs();
@@ -187,42 +179,15 @@ impl Player {
                 if mtv.y > 0.0 {
                     self.on_ground = true;
                 }
-                (*velocity_delta).y = -self.velocity.y;
+                self.velocity.y = 0.0;
             } else if x_abs > y_abs && x_abs > z_abs {
-                (*velocity_delta).x = -self.velocity.x;
+                self.velocity.x = 0.0;
             } else if z_abs > x_abs && z_abs > y_abs {
-                (*velocity_delta).z = -self.velocity.z;
+                self.velocity.z = 0.0;
             }
-            self.position += mtv;
-            self.projected_pos += mtv;
-            self.collision_mesh = aabb::new(PLAYER_BOUNDS, self.projected_pos);
+            self.collision_mesh.translate(mtv);
         }
     }
-
-    /*
-// TODO: Add SAT collision everywhere!
-fn sat_collide(&mut self, velocity_delta: &mut Vector3) {
-    let goal_pos = self.position().clone() + self.velocity().clone();
-    let self_mesh = CollisionMesh::new(gen::cube(3.0), Some(goal_pos));
-
-    if let Some(mtv) = self_mesh.collide_with(&self.test_collision_mesh) {
-        let x_abs = mtv.x.abs();
-        let y_abs = mtv.y.abs();
-        let z_abs = mtv.z.abs();
-        if y_abs > x_abs && y_abs > z_abs {
-            if mtv.y > 0.0 {
-                self.on_ground = true;
-            }
-            (*velocity_delta).y = -self.velocity.y;
-        } else if x_abs > y_abs && x_abs > z_abs {
-            (*velocity_delta).x = -self.velocity.x;
-        } else if z_abs > x_abs && z_abs > y_abs {
-            (*velocity_delta).z = -self.velocity.z;
-        }
-        self.aabb.translate(mtv);
-    }
-    }
-    */
 }
 
 impl Entity for Player {
@@ -254,20 +219,15 @@ impl Entity for Player {
 
         // Handle collisions.
         {
-            // We want to correct the velocity only after we've used it to translate for the
-            // current frame.
-            let mut collision_delta = Vector3 { x: 0.0, y: 0.0, z: 0.0 };
-
-            self.projected_pos = self.position + self.velocity;
-            self.collision_mesh = aabb::new(PLAYER_BOUNDS, self.projected_pos);
+            self.collision_mesh.translate(self.velocity);
 
             // First, check for collisions with static collidables.
             for collidable in collidables {
-                self.collide(&**collidable, &mut collision_delta);
+                self.collide(&**collidable);
             }
             // Then, check for collisions/interactions with entities.
             for entity in entities.into_iter() {
-                self.collide(&**entity, &mut collision_delta);
+                self.collide(&**entity);
                 if entity.interactable() {
                     // TODO: Ray collision.
                     if event_handler.is_key_pressed(&VirtualKeyCode::Return) {
@@ -279,9 +239,6 @@ impl Entity for Player {
                     }
                 }
             }
-
-            self.position += self.velocity;
-            self.velocity += collision_delta;
         }
     }
 

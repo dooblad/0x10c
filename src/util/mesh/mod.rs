@@ -1,3 +1,4 @@
+use cgmath::InnerSpace;
 use gl::types::GLfloat;
 
 use util::math::Point3;
@@ -127,7 +128,7 @@ pub fn gen_normals(positions: &BaseMesh) -> BaseMesh {
             pos_vecs[1] - pos_vecs[0],
             pos_vecs[2] - pos_vecs[0],
         ];
-        let normal = vec_diffs[0].cross(vec_diffs[1]);
+        let normal = vec_diffs[0].cross(vec_diffs[1]).normalize();
 
         // Use the same normal for each point of a single triangle.
         for _ in 0..3 {

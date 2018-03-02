@@ -15,19 +15,14 @@ pub struct Face {
 
 // TODO: Store faces and vertices and have faces hold indices into the vertex vector.
 pub struct CollisionMesh {
-    // vertices: Vec<Point3>,
     faces: Vec<Face>,
     position: Point3,
 }
 
 impl CollisionMesh {
-    pub fn new(mut vertices: BaseMesh, position: Option<Point3>) -> CollisionMesh {
+    pub fn new(vertices: BaseMesh, position: Option<Point3>) -> CollisionMesh {
         assert_eq!(vertices.len() % 9, 0);
 
-        // TODO: Store a position, rather than translating *every* vertex in the mesh.
-        //if let Some(p) = pos {
-        //    translate_vertices(&mut vertices, p);
-        //}
         let position = position.unwrap_or(Point3::new(0.0, 0.0, 0.0));
 
         // TODO: Make more efficient.  `gen_normals` duplicates the normal for each vertex
@@ -101,7 +96,6 @@ impl CollisionMesh {
                 // [__] (__) or
                 // (__) [__]
                 return None;
-                // TODO: Move these tests up in the conditional chain.  Should be more likely.
             } else if self_extents.min <= other_extents.min &&
                 self_extents.max <= other_extents.max {
                 // We're penetrating from the left.
@@ -164,6 +158,14 @@ impl CollisionMesh {
         }
 
         Some(mtv * min_axis.unwrap())
+    }
+
+    pub fn translate(&mut self, v: Vector3) {
+        self.position += v;
+    }
+
+    pub fn position(&self) -> &Point3 {
+        &self.position
     }
 
     /// Find the minimum and maximum points when projecting.

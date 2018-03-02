@@ -1,12 +1,15 @@
-use std;
+use util::collide::sat::CollisionMesh;
+use util::math::Point3;
+use util::mesh::gen;
+use util::mesh::translate_vertices;
 
-use util::math::{Point3, Vector3};
 
-
+/*
 pub struct AABB {
     bounds: [Range; 3],
     position: Point3,
 }
+*/
 
 #[derive(Clone, Debug)]
 pub struct Range {
@@ -14,6 +17,26 @@ pub struct Range {
     pub max: f32,
 }
 
+// TODO: Generate an AABB that's actually a CollisionMesh.
+pub fn new(bounds: [Range; 3], position: Point3) -> CollisionMesh {
+    let x_len = bounds[0].max - bounds[0].min;
+    let y_len = bounds[1].max - bounds[1].min;
+    let z_len = bounds[2].max - bounds[2].min;
+    let mut mesh = gen::rect(
+        x_len,
+        y_len,
+        z_len,
+    );
+    let translation = Point3 {
+        x: bounds[0].max - (x_len / 2.0),
+        y: bounds[1].max - (y_len / 2.0),
+        z: bounds[2].max - (z_len / 2.0),
+    };
+    translate_vertices(&mut mesh, translation);
+    CollisionMesh::new(mesh, Some(position))
+}
+
+/*
 impl AABB {
     pub fn new(bounds: [Range; 3], position: Point3) -> AABB {
         AABB {
@@ -108,3 +131,4 @@ impl Clone for AABB {
         }
     }
 }
+*/

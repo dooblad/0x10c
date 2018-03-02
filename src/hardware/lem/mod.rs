@@ -2,17 +2,17 @@ use entity::Entity;
 use game::event_handler::EventHandler;
 use graphics::Render;
 use graphics::renderer::RenderingContext;
-use graphics::mesh::Mesh;
 use graphics::mesh::pixel_quad::PixelQuad;
-use graphics::mesh::obj;
 use hardware::dcpu::Dcpu;
 use hardware::dcpu::assembler;
 use hardware::keyboard;
 use hardware::keyboard::Keyboard;
-use util::collide::aabb::AABB;
 use util::collide::Collide;
+use util::collide::sat::CollisionMesh;
 use util::math::{Point3, Vector3};
 use world::EntitySlice;
+use world::collidable::Collidable;
+use world::collidable::obj;
 
 const SCREEN_SIZE_IN_PIXELS: (u16, u16) = (128, 96);
 const SCREEN_SIZE_IN_CELLS: (u16, u16) = (32, 12);
@@ -533,9 +533,8 @@ pub struct CellConfig {
 
 
 pub struct Lem {
-    aabb: AABB,
     screen: PixelQuad,
-    terminal: Mesh,
+    terminal: Collidable,
     blink_timer: u32,
     // TODO: Monitor's don't own the CPU or keyboard.
     dcpu: Dcpu,
@@ -545,7 +544,7 @@ pub struct Lem {
 impl Lem {
     pub fn new(position: Point3) -> Lem {
         let mut dcpu = Dcpu::new();
-        // TODO: Make instructions lowercase (easier typing, yo).
+        // TODO: Load this from a file.
         let program = assembler::assemble(
 "\
 ; Initial screen coord
@@ -654,8 +653,7 @@ jsr set_blink
 
         // TODO: Have some sort of resource manager that clones mesh instances, rather
         // than doing file IO every time.
-        let mut terminal = obj::new("res/terminal.obj");
-        terminal.move_to(position);
+        let terminal = obj::new("res/terminal.obj", position);
 
         let mut screen = PixelQuad::new(
             (SCREEN_SIZE_IN_PIXELS.0 as u32, SCREEN_SIZE_IN_PIXELS.1 as u32),
@@ -667,7 +665,6 @@ jsr set_blink
         });
 
         Lem {
-            aabb: AABB::new(terminal.bounds(), position),
             screen,
             terminal,
             blink_timer: 0,
@@ -767,8 +764,8 @@ impl Render for Lem {
 }
 
 impl Collide for Lem {
-    fn aabb(&self) -> &AABB {
-        &self.aabb
+    fn collision_mesh(&self) -> &CollisionMesh {
+        &self.terminal.collision_mesh()
     }
 }
 

@@ -6,11 +6,12 @@ use std::ops::Neg;
 use game::event_handler::EventHandler;
 use graphics::renderer;
 use graphics::Render;
+use graphics::mesh::obj;
 use entity::Entity;
 use util::f32::clamp;
 use util::math::{Point3, Vector2, Vector3, Rotation};
-use util::collide::aabb::{AABB, Range};
-use util::mesh::gen;
+use util::collide::aabb;
+use util::collide::aabb::Range;
 use util::collide::Collide;
 use util::collide::sat::CollisionMesh;
 use world::EntitySlice;
@@ -28,7 +29,12 @@ const GRAVITY: f32 = 0.02;
 const VELOCITY_DAMPENING_FACTOR: f32 = 0.8;
 
 pub struct Player {
-    aabb: AABB,
+    // TODO: We need to recreate the player's mesh every frame currently, because
+    // collision meshes are stored as a static collection of vertices without any factored
+    // position.
+    collision_mesh: CollisionMesh,
+    projected_pos: Point3,
+    position: Point3,
     velocity: Vector3,
     rotation: Rotation,
     on_ground: bool,
@@ -39,15 +45,25 @@ pub struct Player {
 
 impl Player {
     pub fn new() -> Player {
+        let test_position = Point3 {
+            x: 7.0,
+            y: 3.0,
+            z: 0.0,
+        };
+        let mut test_render_mesh = obj::new("res/ramp.obj");
+        test_render_mesh.move_to(test_position);
+        let position = Point3 { x: 0.0, y: 4.0, z: 0.0 };
         Player {
-            aabb: AABB::new(PLAYER_BOUNDS, Point3 { x: 0.0, y: 0.0, z: 0.0 }),
+            collision_mesh: aabb::new(PLAYER_BOUNDS, position),
+            projected_pos: Point3 { x: 0.0, y: 0.0, z: 0.0 },
+            position,
             velocity: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
             rotation: Rotation {
                 horizontal_angle: 0.0,
                 vertical_angle: 0.0,
             },
             on_ground: false,
-            fly_mode: false,
+            fly_mode: true,
             input_captured: false,
         }
     }
@@ -75,7 +91,11 @@ impl Player {
     }
 
     pub fn position(&self) -> &Point3 {
-        &self.aabb.position()
+        &self.position
+    }
+
+    pub fn velocity(&self) -> &Vector3 {
+        &self.velocity
     }
 
     pub fn rotation(&self) -> &Rotation {
@@ -159,54 +179,50 @@ impl Player {
     /// * `velocity_delta` - How much the velocity will change after the collision phase.
     fn collide<C: ?Sized + Collide>(&mut self, collidable: &C,
                                     velocity_delta: &mut Vector3) {
-        if let Some(mtv) = self.aabb.collide(self.velocity, collidable.aabb()) {
-            let mtv_axis = if mtv.x != 0.0 {
-                0
-            } else if mtv.y != 0.0 {
+        if let Some(mtv) = self.collision_mesh.collide_with(collidable.collision_mesh()) {
+            let x_abs = mtv.x.abs();
+            let y_abs = mtv.y.abs();
+            let z_abs = mtv.z.abs();
+            if y_abs > x_abs && y_abs > z_abs {
                 if mtv.y > 0.0 {
                     self.on_ground = true;
                 }
-                1
-            } else if mtv.z != 0.0 {
-                2
-            } else {
-                panic!("Received `Some` MTV with all-zero components.");
-            };
-
-            velocity_delta[mtv_axis] = -self.velocity[mtv_axis];
-
-            self.aabb.translate(mtv);
-        }
-    }
-
-    // TODO: Add SAT collision everywhere!
-    fn sat_collide(&mut self, velocity_delta: &mut Vector3) {
-        const MTV_DOT_LOWER_BOUND: f32 = 0.1;
-
-        let self_mesh = CollisionMesh::new(gen::cube(3.0),
-                                           Some(self.position().clone()));
-
-        let other_mesh = CollisionMesh::new(gen::tetrahedron(3.0), Some(Point3 {
-            x: 7.0,
-            y: 3.0,
-            z: 0.0,
-        }));
-
-        if let Some(mtv) = self_mesh.collide_with(&other_mesh) {
-            println!("MTV: {:?}", mtv);
-            if mtv.dot(mtv) > MTV_DOT_LOWER_BOUND {
-                // Only correct our velocity when `mtv` is sufficiently large.
-                let normalized_mtv = mtv.normalize();
-                let velocity_correction = Vector3 {
-                    x: -self.velocity.x * normalized_mtv.x,
-                    y: -self.velocity.y * normalized_mtv.y,
-                    z: -self.velocity.z * normalized_mtv.z,
-                };
-                *velocity_delta += velocity_correction;
+                (*velocity_delta).y = -self.velocity.y;
+            } else if x_abs > y_abs && x_abs > z_abs {
+                (*velocity_delta).x = -self.velocity.x;
+            } else if z_abs > x_abs && z_abs > y_abs {
+                (*velocity_delta).z = -self.velocity.z;
             }
-            self.aabb.translate(mtv);
+            self.position += mtv;
+            self.projected_pos += mtv;
+            self.collision_mesh = aabb::new(PLAYER_BOUNDS, self.projected_pos);
         }
     }
+
+    /*
+// TODO: Add SAT collision everywhere!
+fn sat_collide(&mut self, velocity_delta: &mut Vector3) {
+    let goal_pos = self.position().clone() + self.velocity().clone();
+    let self_mesh = CollisionMesh::new(gen::cube(3.0), Some(goal_pos));
+
+    if let Some(mtv) = self_mesh.collide_with(&self.test_collision_mesh) {
+        let x_abs = mtv.x.abs();
+        let y_abs = mtv.y.abs();
+        let z_abs = mtv.z.abs();
+        if y_abs > x_abs && y_abs > z_abs {
+            if mtv.y > 0.0 {
+                self.on_ground = true;
+            }
+            (*velocity_delta).y = -self.velocity.y;
+        } else if x_abs > y_abs && x_abs > z_abs {
+            (*velocity_delta).x = -self.velocity.x;
+        } else if z_abs > x_abs && z_abs > y_abs {
+            (*velocity_delta).z = -self.velocity.z;
+        }
+        self.aabb.translate(mtv);
+    }
+    }
+    */
 }
 
 impl Entity for Player {
@@ -242,8 +258,8 @@ impl Entity for Player {
             // current frame.
             let mut collision_delta = Vector3 { x: 0.0, y: 0.0, z: 0.0 };
 
-            self.sat_collide(&mut collision_delta);
-            self.velocity += collision_delta;
+            self.projected_pos = self.position + self.velocity;
+            self.collision_mesh = aabb::new(PLAYER_BOUNDS, self.projected_pos);
 
             // First, check for collisions with static collidables.
             for collidable in collidables {
@@ -264,7 +280,7 @@ impl Entity for Player {
                 }
             }
 
-            self.aabb.translate(self.velocity);
+            self.position += self.velocity;
             self.velocity += collision_delta;
         }
     }
@@ -279,22 +295,12 @@ impl Entity for Player {
 }
 
 impl Collide for Player {
-    fn aabb(&self) -> &AABB {
-        &self.aabb
+    fn collision_mesh(&self) -> &CollisionMesh {
+        &self.collision_mesh
     }
 }
 
 impl Render for Player {
-    fn render(&mut self, context: &mut renderer::RenderingContext) {
-        use graphics::mesh::tetrahedron;
-
-        // TODO: QUIT RENDERING IT HERE.
-        let mut mesh = tetrahedron::new(3.0);
-        mesh.move_to(Point3 {
-            x: 7.0,
-            y: 3.0,
-            z: 0.0,
-        });
-        mesh.render(context);
+    fn render(&mut self, _: &mut renderer::RenderingContext) {
     }
 }

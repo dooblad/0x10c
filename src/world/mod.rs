@@ -79,10 +79,24 @@ impl World {
             z: -25.0,
         })));
 
+        /*
         collidables.push(Box::new(obj::new("res/globe.obj", Point3 {
             x: 0.0,
             y: 8.0,
             z: 0.0,
+        })));
+        */
+
+        collidables.push(Box::new(obj::new("res/ramp.obj", Point3 {
+            x: 5.0,
+            y: 0.0,
+            z: 17.0,
+        })));
+
+        collidables.push(Box::new(obj::new("res/ramp_steep.obj", Point3 {
+            x: -2.0,
+            y: 0.0,
+            z: 17.0,
         })));
 
         let mut entities: Vec<Box<Entity>> = Vec::new();

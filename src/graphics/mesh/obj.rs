@@ -11,8 +11,6 @@ pub fn new(file_name: &str) -> Mesh {
     let (models, materials) = tobj::load_obj(&Path::new(file_name)).unwrap();
 
     // TODO: Support multiple models/materials.
-    assert_eq!(models.len(), 1);
-    assert_eq!(materials.len(), 1);
 
     // TODO: Don't clone... inefficient.
     let mesh = models[0].mesh.clone();

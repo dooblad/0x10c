@@ -1,45 +1,46 @@
-extern crate tobj;
-
 use gl::types::GLfloat;
-use std::path::Path;
 
 use util::math::Point3;
 
+
+/// A vector of non-indexed vertices, where each consecutive 9 (3 components * 3 points)
+/// elements in the vector defines a face.
+pub type BaseMesh = Vec<GLfloat>;
 
 pub mod gen {
     use super::*;
 
 
-    pub fn tetrahedron(size: f32) -> Vec<GLfloat> {
-        // Build base vertices.
-        let s = size;
-        let frac_1_sqrt_3 = s / 3.0f32.sqrt();
-        let frac_1_2 = s / 0.5;
+    pub fn tetrahedron(size: f32) -> BaseMesh {
+        // TODO: Looks funky, and not the good kind.
+        let a = size;
+        let b = size * 3.0f32.sqrt() / 2.0;
+        let c = size / 2.0;
         vec![
             // Bottom
-            -frac_1_sqrt_3, 0.0, -frac_1_2,
-            frac_1_sqrt_3, 0.0, -frac_1_2,
-            0.0, 0.0, frac_1_2,
+            0.0, 0.0, -a,
+            c, 0.0, b,
+            -c, 0.0, b,
             // Front
-            -frac_1_sqrt_3, 0.0, -frac_1_2,
-            frac_1_sqrt_3, 0.0, -frac_1_2,
-            0.0, s, 0.0,
+            -c, 0.0, b,
+            c, 0.0, b,
+            0.0, a, 0.0,
             // Back Left
-            0.0, 0.0, frac_1_2,
-            -frac_1_sqrt_3, 0.0, -frac_1_2,
-            0.0, s, 0.0,
+            0.0, 0.0, -a,
+            -c, 0.0, b,
+            0.0, a, 0.0,
             // Back Right
-            frac_1_sqrt_3, 0.0, -frac_1_2,
-            0.0, 0.0, frac_1_2,
-            0.0, s, 0.0,
+            c, 0.0, b,
+            0.0, 0.0, -a,
+            0.0, a, 0.0,
         ]
     }
 
-    pub fn cube(size: f32) -> Vec<GLfloat> {
+    pub fn cube(size: f32) -> BaseMesh {
         rect(size, size, size)
     }
 
-    pub fn rect(width: f32, height: f32, depth: f32) -> Vec<GLfloat> {
+    pub fn rect(width: f32, height: f32, depth: f32) -> BaseMesh {
         assert!(width > 0.0);
         assert!(height > 0.0);
         assert!(depth > 0.0);
@@ -83,25 +84,12 @@ pub mod gen {
 
         expand_indices(&positions, &indices)
     }
-
-    pub fn obj(file_name: &str) -> Vec<GLfloat> {
-        let (models, materials) = tobj::load_obj(&Path::new(file_name)).unwrap();
-
-        // TODO: Support multiple models/materials.
-        assert_eq!(models.len(), 1);
-        assert_eq!(materials.len(), 1);
-
-        // TODO: Don't clone... inefficient.
-        let mesh = &models[0].mesh;
-
-        expand_indices(&mesh.positions, &mesh.indices)
-    }
 }
 
 
 // General Helper Functions
 
-pub fn translate_vertices(verts: &mut Vec<GLfloat>, pos: Point3) {
+pub fn translate_vertices(verts: &mut BaseMesh, pos: Point3) {
     for i in 0..(verts.len() / 3) {
         for j in 0..3 {
             verts[i*3 + j] += pos[j]
@@ -109,8 +97,8 @@ pub fn translate_vertices(verts: &mut Vec<GLfloat>, pos: Point3) {
     }
 }
 
-pub fn expand_indices(base_positions: &Vec<GLfloat>, indices: &Vec<u32>) -> Vec<GLfloat> {
-    let mut positions: Vec<GLfloat> = Vec::with_capacity(indices.len() * 3);
+pub fn expand_indices(base_positions: &BaseMesh, indices: &Vec<u32>) -> BaseMesh {
+    let mut positions: BaseMesh = Vec::with_capacity(indices.len() * 3);
     for i in 0..indices.len() {
         positions.push(base_positions[(indices[i] * 3) as usize]);
         positions.push(base_positions[(indices[i] * 3 + 1) as usize]);
@@ -119,8 +107,8 @@ pub fn expand_indices(base_positions: &Vec<GLfloat>, indices: &Vec<u32>) -> Vec<
     positions
 }
 
-pub fn gen_normals(positions: &Vec<GLfloat>) -> Vec<GLfloat> {
-    let mut normals: Vec<GLfloat> = Vec::with_capacity(positions.len());
+pub fn gen_normals(positions: &BaseMesh) -> BaseMesh {
+    let mut normals: BaseMesh = Vec::with_capacity(positions.len());
 
     let mut pos_iter = positions.iter().peekable();
     while pos_iter.peek().is_some() {

@@ -3,7 +3,8 @@ use gl::types::GLfloat;
 
 use util::collide::aabb::Range;
 use util::math::{Point3, Vector3};
-use util::mesh::{gen_normals, translate_vertices};
+use util::mesh::gen_normals;
+use util::mesh::BaseMesh;
 
 
 #[derive(Clone)]
@@ -16,18 +17,18 @@ pub struct Face {
 pub struct CollisionMesh {
     // vertices: Vec<Point3>,
     faces: Vec<Face>,
+    position: Point3,
 }
 
 impl CollisionMesh {
-    /// `vertices` must not be indexed.  Each face is assumed to be a consecutive 9
-    /// (3 components * 3 points) elements in the vector.
-    pub fn new(mut vertices: Vec<GLfloat>, pos: Option<Point3>) -> CollisionMesh {
+    pub fn new(mut vertices: BaseMesh, position: Option<Point3>) -> CollisionMesh {
         assert_eq!(vertices.len() % 9, 0);
 
         // TODO: Store a position, rather than translating *every* vertex in the mesh.
-        if let Some(p) = pos {
-            translate_vertices(&mut vertices, p);
-        }
+        //if let Some(p) = pos {
+        //    translate_vertices(&mut vertices, p);
+        //}
+        let position = position.unwrap_or(Point3::new(0.0, 0.0, 0.0));
 
         // TODO: Make more efficient.  `gen_normals` duplicates the normal for each vertex
         // of the triangle.
@@ -67,20 +68,25 @@ impl CollisionMesh {
             });
         }
 
-        CollisionMesh { faces }
+        CollisionMesh {
+            faces,
+            position,
+        }
     }
 
-    // TODO: Make more efficient by translating one of the meshes into the other's
-    // coordinate space.
     pub fn collide_with(&self, other: &CollisionMesh) -> Option<Vector3> {
         let axes_to_test = self.all_axes(other);
 
-        // TODO: Better variable names.
+        // Define a translation vector to move `other` into our coordinate space.  This is
+        // more efficient than both meshes translating by their position vectors, because
+        // only one set of vertices needs to be translated.
+        let other_translation = Some(other.position - self.position);
+
         let mut mtv: Option<f32> = None;
         let mut min_axis: Option<Vector3> = None;
         for axis in axes_to_test {
-            let self_extents = Self::projected_extents(self, axis);
-            let other_extents = Self::projected_extents(other, axis);
+            let self_extents = Self::projected_extents(self, axis, None);
+            let other_extents = Self::projected_extents(other, axis, other_translation);
 
             // Below, "()" pairs represent our interval, "[]" pairs represent `other`s
             // interval, and "."s represent how much of our interval is colliding with
@@ -95,6 +101,17 @@ impl CollisionMesh {
                 // [__] (__) or
                 // (__) [__]
                 return None;
+                // TODO: Move these tests up in the conditional chain.  Should be more likely.
+            } else if self_extents.min <= other_extents.min &&
+                self_extents.max <= other_extents.max {
+                // We're penetrating from the left.
+                // (__[..)__]
+                tv = - (self_extents.max - other_extents.min);
+            } else if self_extents.min <= other_extents.max &&
+                self_extents.max >= other_extents.max {
+                // We're penetrating from the right.
+                // [__(..]__)
+                tv = other_extents.max - self_extents.min;
             } else if self_extents.min >= other_extents.min &&
                 self_extents.max <= other_extents.max {
                 // We're engulfed.
@@ -125,27 +142,6 @@ impl CollisionMesh {
                 } else {
                     right_dist
                 };
-            // TODO: Move these tests up in the conditional chain.  Should be more likely.
-            } else if self_extents.min <= other_extents.min &&
-                self_extents.max <= other_extents.max {
-                // We're penetrating from the left.
-                // (__[..)__]
-                tv = - (self_extents.max - other_extents.min);
-            } else if self_extents.min <= other_extents.max &&
-                self_extents.max >= other_extents.max {
-                // We're penetrating from the right.
-                // [__(..]__)
-                tv = other_extents.max - self_extents.min;
-                /*
-            } else if self_extents.min == other_extents.min &&
-                self_extents.max == other_extents.max {
-                // Ranges are literally equal.
-                // [..]
-                // (..)
-                // Need to choose an arbitrary direction to push it.  I flipped a coin,
-                // and it came up left, so left it is.
-                tv = - (self_extents.max - self_extents.min);
-                */
             } else {
                 panic!("(Supposedly) impossible case reached with: \n
 \tself_extents:  {:?},
@@ -161,15 +157,26 @@ impl CollisionMesh {
             }
         }
 
-        Some(mtv.unwrap() * min_axis.unwrap())
+        let mtv = mtv.unwrap();
+        if mtv.abs() == 0.0 {
+            // Discard "ghost" collisions.
+            return None;
+        }
+
+        Some(mtv * min_axis.unwrap())
     }
 
-    /// Find the minimum and maximum points when projecting
-    fn projected_extents(mesh: &CollisionMesh, axis: Vector3) -> Range {
+    /// Find the minimum and maximum points when projecting.
+    fn projected_extents(mesh: &CollisionMesh, axis: Vector3,
+                         translation: Option<Vector3>) -> Range {
         let mut min = None;
         let mut max = None;
         for f in &mesh.faces {
             for v in f.vertices.iter() {
+                let v = match translation {
+                    Some(t) => v + t,
+                    None => v.clone(),
+                };
                 let projection = v.dot(axis);
                 if min.is_none() || projection < min.unwrap() {
                     min = Some(projection);
@@ -209,7 +216,8 @@ impl CollisionMesh {
                         // cross product.
                         if axis.dot(axis) < NULL_AXIS_UPPER_BOUND {
                             axis = edge_a.cross(
-                                face_b.vertices[j] - face_a.vertices[i]);
+                                (face_b.vertices[j] + other.position.to_vec()) -
+                                    (face_a.vertices[i] + self.position.to_vec()));
                             if axis.dot(axis) < NULL_AXIS_UPPER_BOUND {
                                 // If it's still zero, then fuck it.
                                 continue
@@ -241,7 +249,7 @@ mod tests {
             0.5, -0.5, 0.0,
             0.0, 0.5, 0.0,
         ];
-        let mesh = CollisionMesh::new(vertices.to_vec());
+        let mesh = CollisionMesh::new(vertices.to_vec(), None);
         assert_eq!(mesh.faces.len(), 1);
     }
 
@@ -344,9 +352,6 @@ mod tests {
     }
 
     fn gen(vertices: &mut Vec<GLfloat>, pos: Point3) -> CollisionMesh {
-        use util::mesh::translate_vertices;
-
-        translate_vertices(vertices, pos);
-        CollisionMesh::new(vertices)
+        CollisionMesh::new(vertices, pos)
     }
 }

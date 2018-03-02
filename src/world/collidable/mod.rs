@@ -5,36 +5,56 @@ pub mod rect;
 use graphics::Render;
 use graphics::mesh::Mesh;
 use graphics::renderer::RenderingContext;
-use util::collide::aabb::AABB;
 use util::collide::Collide;
+use util::collide::sat::CollisionMesh;
 use util::math::Point3;
+use util::mesh::BaseMesh;
+use util::mesh::gen_normals;
 
 
 pub struct Collidable {
-    aabb: AABB,
-    mesh: Mesh,
+    collision_mesh: CollisionMesh,
+    // aabb: AABB,
+    render_mesh: Mesh,
+}
+
+/// Private AABB struct for doing quick tests to filter out objects that definitely aren't
+/// colliding.
+struct AABB {
+    // TODO: Implement
 }
 
 impl Collidable {
-    pub fn new(mut mesh: Mesh, position: Point3) -> Collidable {
-        // TODO: If/when we add velocity, update the mesh's position as well.
-        mesh.move_to(position);
+    /// When no `collision_mesh` is given, `mesh` is used for both rendering and
+    /// colliding.
+    pub fn new(mesh: BaseMesh, collision_mesh: Option<BaseMesh>,
+               position: Point3) -> Collidable {
+        let cm_base = match collision_mesh {
+            Some(cm) => cm,
+            None => mesh.clone(),
+        };
+        let collision_mesh = CollisionMesh::new(cm_base, Some(position));
+        // TODO: Calculate the convex hull of `mesh` to create a collision mesh.
+        let render_mesh_normals = gen_normals(&mesh);
+        let mut render_mesh = Mesh::new(mesh, None, Some(render_mesh_normals), None,
+                                        None);
+        render_mesh.move_to(position);
 
         Collidable {
-            aabb: AABB::new(mesh.bounds(), position),
-            mesh,
+            collision_mesh,
+            render_mesh,
         }
     }
 }
 
 impl Render for Collidable {
     fn render(&mut self, context: &mut RenderingContext) {
-        self.mesh.render(context);
+        self.render_mesh.render(context);
     }
 }
 
 impl Collide for Collidable {
-    fn aabb(&self) -> &AABB {
-        &self.aabb
+    fn collision_mesh(&self) -> &CollisionMesh {
+        &self.collision_mesh
     }
 }

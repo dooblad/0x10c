@@ -3,6 +3,7 @@ extern crate gl;
 extern crate glutin;
 extern crate image;
 extern crate rand;
+extern crate tobj;
 
 use std::fs::File;
 use std::io::Read;

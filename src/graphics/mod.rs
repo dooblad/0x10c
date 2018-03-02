@@ -43,6 +43,7 @@ impl Display {
 
         unsafe{
             gl::Enable(gl::DEPTH_TEST);
+            gl::Enable(gl::CULL_FACE);
             gl::CullFace(gl::BACK);
         }
 

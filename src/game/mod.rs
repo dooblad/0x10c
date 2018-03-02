@@ -9,7 +9,7 @@ use entity;
 use graphics::Display;
 use world;
 
-const WINDOW_DIMENSIONS: (u32, u32) = (1280, 720);
+const WINDOW_DIMENSIONS: (u32, u32) = (800, 600);
 const VSYNC: bool = true;
 static WINDOW_TITLE: &'static str = "0x10c";
 

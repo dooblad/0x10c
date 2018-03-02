@@ -1,4 +1,4 @@
-use cgmath::{EuclideanSpace, InnerSpace};
+use cgmath::EuclideanSpace;
 use gl::types::GLfloat;
 
 use util::collide::aabb::Range;
@@ -16,7 +16,14 @@ pub struct Face {
 // TODO: Store faces and vertices and have faces hold indices into the vertex vector.
 pub struct CollisionMesh {
     faces: Vec<Face>,
+    aabb: AABB,
     position: Point3,
+}
+
+/// Private AABB struct for doing quick tests to filter out objects that definitely aren't
+/// colliding.
+struct AABB {
+    bounds: [Range; 3],
 }
 
 impl CollisionMesh {
@@ -65,90 +72,27 @@ impl CollisionMesh {
 
         CollisionMesh {
             faces,
+            aabb: AABB::new(Self::bounds(&vertices)),
             position,
         }
     }
 
     pub fn collide_with(&self, other: &CollisionMesh) -> Option<Vector3> {
-        let axes_to_test = self.all_axes(other);
-
         // Define a translation vector to move `other` into our coordinate space.  This is
         // more efficient than both meshes translating by their position vectors, because
         // only one set of vertices needs to be translated.
         let other_translation = Some(other.position - self.position);
 
+        // If their AABBs don't collide, then the precise meshes definitely don't collide.
+        if !self.aabb.collides_with(&other.aabb, other_translation.unwrap()) {
+            return None;
+        }
+
         let mut mtv: Option<f32> = None;
         let mut min_axis: Option<Vector3> = None;
-        for axis in axes_to_test {
-            let self_extents = Self::projected_extents(self, axis, None);
-            let other_extents = Self::projected_extents(other, axis, other_translation);
-
-            // Below, "()" pairs represent our interval, "[]" pairs represent `other`s
-            // interval, and "."s represent how much of our interval is colliding with
-            // `other`s.
-            //
-            // The goal is to find the smallest vector that moves *ourselves* out of the
-            // collision.
-            let tv;
-            if self_extents.min > other_extents.max ||
-                self_extents.max < other_extents.min {
-                // Non-overlapping intervals
-                // [__] (__) or
-                // (__) [__]
-                return None;
-            } else if self_extents.min <= other_extents.min &&
-                self_extents.max <= other_extents.max {
-                // We're penetrating from the left.
-                // (__[..)__]
-                tv = - (self_extents.max - other_extents.min);
-            } else if self_extents.min <= other_extents.max &&
-                self_extents.max >= other_extents.max {
-                // We're penetrating from the right.
-                // [__(..]__)
-                tv = other_extents.max - self_extents.min;
-            } else if self_extents.min >= other_extents.min &&
-                self_extents.max <= other_extents.max {
-                // We're engulfed.
-                // [__(..)__]
-                //
-                // First, find which side is easier to push ourselves to.
-
-                // How far we need to move left to not collide.
-                let left_dist = self_extents.max - other_extents.min;
-                // How far we need to move right to not collide.
-                let right_dist = other_extents.max - self_extents.min;
-                tv = if left_dist < right_dist {
-                    // Negate to go from a distance to a direction.
-                    -left_dist
-                } else {
-                    right_dist
-                };
-            } else if self_extents.min <= other_extents.min &&
-                self_extents.max >= other_extents.max {
-                // They're engulfed.
-                // (..[..]..)
-                //
-                // Basipally symmetric to the previous case.
-                let left_dist = self_extents.max - other_extents.min;
-                let right_dist = other_extents.max - self_extents.min;
-                tv = if left_dist < right_dist {
-                    -left_dist
-                } else {
-                    right_dist
-                };
-            } else {
-                panic!("(Supposedly) impossible case reached with: \n
-\tself_extents:  {:?},
-\tother_extents: {:?},
-\taxis:          {:?},
-                ", self_extents, other_extents, axis);
-            }
-
-            // Check against MTV.
-            if mtv.is_none() || tv.abs() < mtv.unwrap().abs() {
-                mtv = Some(tv);
-                min_axis = Some(axis);
-            }
+        for face in self.faces.iter().chain(other.faces.iter()) {
+            self.test_axis(other, other_translation, face.normal,
+                           &mut mtv, &mut min_axis);
         }
 
         let mtv = mtv.unwrap();
@@ -166,6 +110,82 @@ impl CollisionMesh {
 
     pub fn position(&self) -> &Point3 {
         &self.position
+    }
+
+    /// Returns true if there is a collision on the given `axis`.
+    fn test_axis(&self, other: &CollisionMesh, other_translation: Option<Vector3>,
+                 axis: Vector3, mtv: &mut Option<GLfloat>,
+                 min_axis: &mut Option<Vector3>) -> bool {
+        let self_extents = Self::projected_extents(self, axis, None);
+        let other_extents = Self::projected_extents(other, axis, other_translation);
+
+        // Below, "()" pairs represent our interval, "[]" pairs represent `other`s
+        // interval, and "."s represent how much of our interval is colliding with
+        // `other`s.
+        //
+        // The goal is to find the smallest vector that moves *ourselves* out of the
+        // collision.
+        let tv;
+        if self_extents.min > other_extents.max ||
+            self_extents.max < other_extents.min {
+            // Non-overlapping intervals
+            // [__] (__) or
+            // (__) [__]
+            return false;
+        } else if self_extents.min <= other_extents.min &&
+            self_extents.max <= other_extents.max {
+            // We're penetrating from the left.
+            // (__[..)__]
+            tv = - (self_extents.max - other_extents.min);
+        } else if self_extents.min <= other_extents.max &&
+            self_extents.max >= other_extents.max {
+            // We're penetrating from the right.
+            // [__(..]__)
+            tv = other_extents.max - self_extents.min;
+        } else if self_extents.min >= other_extents.min &&
+            self_extents.max <= other_extents.max {
+            // We're engulfed.
+            // [__(..)__]
+            //
+            // First, find which side is easier to push ourselves to.
+
+            // How far we need to move left to not collide.
+            let left_dist = self_extents.max - other_extents.min;
+            // How far we need to move right to not collide.
+            let right_dist = other_extents.max - self_extents.min;
+            tv = if left_dist < right_dist {
+                // Negate to go from a distance to a direction.
+                -left_dist
+            } else {
+                right_dist
+            };
+        } else if self_extents.min <= other_extents.min &&
+            self_extents.max >= other_extents.max {
+            // They're engulfed.
+            // (..[..]..)
+            //
+            // Basipally symmetric to the previous case.
+            let left_dist = self_extents.max - other_extents.min;
+            let right_dist = other_extents.max - self_extents.min;
+            tv = if left_dist < right_dist {
+                -left_dist
+            } else {
+                right_dist
+            };
+        } else {
+            panic!("(Supposedly) impossible case reached with: \n
+\tself_extents:  {:?},
+\tother_extents: {:?},
+\taxis:          {:?},
+                ", self_extents, other_extents, axis);
+        }
+
+        // Check against MTV.
+        if mtv.is_none() || tv.abs() < mtv.unwrap().abs() {
+            *mtv = Some(tv);
+            *min_axis = Some(axis);
+        }
+        true
     }
 
     /// Find the minimum and maximum points when projecting.
@@ -191,49 +211,39 @@ impl CollisionMesh {
         Range { min: min.unwrap(), max: max.unwrap() }
     }
 
-    /// Produces a vector of normalized axes to test for a separating axis between this
-    /// mesh and `other`.
-    fn all_axes(&self, other: &CollisionMesh) -> Vec<Vector3> {
-        const NULL_AXIS_UPPER_BOUND: f32 = 0.05;
-
-        let mut result = Vec::with_capacity(
-            self.faces.len() + other.faces.len() +
-                (3 * self.faces.len() * 3 * other.faces.len()));
-
-        for face in &self.faces {
-            result.push(face.normal.clone());
-        }
-        for face in &other.faces {
-            result.push(face.normal.clone());
-        }
-        for face_a in &self.faces {
-            for i in 0..3 {
-                let edge_a = face_a.vertices[(i + 1) % 3] - face_a.vertices[i];
-                for face_b in &other.faces {
-                    for j in 0..3 {
-                        let edge_b = face_b.vertices[(j + 1) % 3] - face_a.vertices[j];
-                        let mut axis = edge_a.cross(edge_b);
-                        // If the axis is close to a zero vector, create a vector from one
-                        // of `edge_a`s vertices to `edge_b`s vertices and use it for the
-                        // cross product.
-                        if axis.dot(axis) < NULL_AXIS_UPPER_BOUND {
-                            axis = edge_a.cross(
-                                (face_b.vertices[j] + other.position.to_vec()) -
-                                    (face_a.vertices[i] + self.position.to_vec()));
-                            if axis.dot(axis) < NULL_AXIS_UPPER_BOUND {
-                                // If it's still zero, then fuck it.
-                                continue
-                            } else {
-                                result.push(axis.normalize());
-                            }
-                        } else {
-                            result.push(axis.normalize());
-                        }
-                    }
+    /// Finds extrema in this mesh's vertices (useful for creating AABBs).
+    fn bounds(vertices: &BaseMesh) -> [Range; 3] {
+        let mut result = [
+            Range { min: vertices[0], max: vertices[0] },
+            Range { min: vertices[1], max: vertices[1] },
+            Range { min: vertices[2], max: vertices[2] },
+        ];
+        for i in 0..(vertices.len() / 3) {
+            for j in 0..3 {
+                if vertices[i*3 + j] < result[j].min {
+                    result[j].min = vertices[i*3 + j];
+                } else if vertices[i*3 + j] > result[j].max {
+                    result[j].max = vertices[i*3 + j];
                 }
             }
         }
         result
+    }
+}
+
+impl AABB {
+    pub fn new(bounds: [Range; 3]) -> AABB {
+        AABB { bounds }
+    }
+
+    pub fn collides_with(&self, other: &AABB, other_translation: Vector3) -> bool {
+        for i in 0..3 {
+            if self.bounds[i].max < (other.bounds[i].min + other_translation[i]) ||
+                self.bounds[i].min > (other.bounds[i].max + other_translation[i]) {
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -357,3 +367,4 @@ mod tests {
         CollisionMesh::new(vertices, pos)
     }
 }
+

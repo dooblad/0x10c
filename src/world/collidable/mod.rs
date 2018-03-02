@@ -14,14 +14,7 @@ use util::mesh::gen_normals;
 
 pub struct Collidable {
     collision_mesh: CollisionMesh,
-    // aabb: AABB,
     render_mesh: Mesh,
-}
-
-/// Private AABB struct for doing quick tests to filter out objects that definitely aren't
-/// colliding.
-struct AABB {
-    // TODO: Implement
 }
 
 impl Collidable {

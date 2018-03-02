@@ -14,7 +14,6 @@ use std::ptr;
 use graphics::Render;
 use graphics::renderer::RenderingContext;
 use graphics::texture::Texture;
-use util::collide::aabb::Range;
 
 struct VertexArray {
     pub vbo_id: GLuint,
@@ -178,26 +177,6 @@ impl Mesh {
             gl::STATIC_DRAW,
         );
         vbo_id
-    }
-
-    /// Finds extrema in this mesh's positions (useful for creating AABBs).
-    pub fn bounds(&self) -> [Range; 3] {
-        let positions = &self.positions.data;
-        let mut result = [
-            Range { min: positions[0], max: positions[0] },
-            Range { min: positions[1], max: positions[1] },
-            Range { min: positions[2], max: positions[2] },
-        ];
-        for i in 0..(positions.len() / 3) {
-            for j in 0..3 {
-                if positions[i*3 + j] < result[j].min {
-                    result[j].min = positions[i*3 + j];
-                } else if positions[i*3 + j] > result[j].max {
-                    result[j].max = positions[i*3 + j];
-                }
-            }
-        }
-        result
     }
 
     pub fn positions(&self) -> &Vec<GLfloat> {

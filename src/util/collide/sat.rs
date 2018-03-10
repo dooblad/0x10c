@@ -91,8 +91,10 @@ impl CollisionMesh {
         let mut mtv: Option<f32> = None;
         let mut min_axis: Option<Vector3> = None;
         for face in self.faces.iter().chain(other.faces.iter()) {
-            self.test_axis(other, other_translation, face.normal,
-                           &mut mtv, &mut min_axis);
+            if !self.test_axis(other, other_translation, face.normal,
+                           &mut mtv, &mut min_axis) {
+                return None;
+            }
         }
 
         let mtv = mtv.unwrap();

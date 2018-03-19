@@ -41,7 +41,7 @@ impl EventHandler {
                 WindowEvent { event, .. } => match event {
                     glutin::WindowEvent::Closed => *close_requested = true,
                     glutin::WindowEvent::KeyboardInput { input, .. } =>
-                        Self::handle_key_event(input, pressed_keys),
+                        Self::handle_key_event(input, pressed_keys, close_requested),
                     _ => (),
                 },
                 DeviceEvent { event, .. } => {
@@ -66,7 +66,7 @@ impl EventHandler {
                                 },
                             }
                         },
-                        Key(input) => Self::handle_key_event(input, pressed_keys),
+                        Key(input) => Self::handle_key_event(input, pressed_keys, close_requested),
                         Text { codepoint } => {
                             println!("Codepoint: {}", codepoint);
                         },
@@ -77,11 +77,17 @@ impl EventHandler {
         });
     }
 
-    fn handle_key_event(input: glutin::KeyboardInput, pressed_keys: &mut HashSet<VirtualKeyCode>) {
+    fn handle_key_event(input: glutin::KeyboardInput,
+                        pressed_keys: &mut HashSet<VirtualKeyCode>,
+                        close_requested: &mut bool) {
         match input {
-          glutin::KeyboardInput { state, virtual_keycode: Some(key), .. } => {
+          glutin::KeyboardInput { state, virtual_keycode: Some(key), modifiers, .. } => {
               match state {
                   glutin::ElementState::Pressed => {
+                      if modifiers.logo && key == VirtualKeyCode::W {
+                          // [Command/Windows]-w was pressed, so we should close the window.
+                          *close_requested = true;
+                      }
                       pressed_keys.insert(key);
                   },
                   glutin::ElementState::Released => {
@@ -113,8 +119,6 @@ impl EventHandler {
         return self.pressed_keys.contains(key);
     }
 
-    // TODO: Not working correctly.  Spamming events.  Try putting input on a separate
-    // thread.
     pub fn is_key_pressed(&self, key: &glutin::VirtualKeyCode) -> bool {
         return self.pressed_keys.contains(key) && !self.last_pressed_keys.contains(key);
     }

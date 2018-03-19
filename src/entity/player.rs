@@ -9,12 +9,13 @@ use graphics::Render;
 use graphics::mesh::obj;
 use entity::Entity;
 use util::f32::clamp;
-use util::math::{Point3, Vector2, Vector3, Rotation};
+use util::math::{Point3, Ray3, Rotation, Vector2, Vector3};
 use util::collide::aabb;
 use util::collide::aabb::Range;
 use util::collide::Collide;
 use util::collide::sat::CollisionMesh;
-use world::EntitySlice;
+use world::TickConfig;
+
 
 const PLAYER_BOUNDS: [Range; 3] = [
     Range { min: -1.0, max: 1.0 },
@@ -191,9 +192,9 @@ impl Player {
 }
 
 impl Entity for Player {
-    fn tick(&mut self, event_handler: &EventHandler,
-            collidables: &Vec<Box<Collide>>,
-            entities: EntitySlice) {
+    fn tick(&mut self, config: TickConfig) {
+        let event_handler = config.event_handler;
+
         // Process input.
         {
             let mut mouse_delta = Vector2 { x: 0.0, y: 0.0 };
@@ -222,29 +223,39 @@ impl Entity for Player {
             self.collision_mesh.translate(self.velocity);
 
             // First, check for collisions with static collidables.
-            for collidable in collidables {
+            for collidable in config.collidables.iter() {
                 self.collide(&**collidable);
             }
             // Then, check for collisions/interactions with entities.
-            for entity in entities.into_iter() {
-                self.collide(&**entity);
+            for entity in config.entities.into_iter() {
+                let mut entity = & mut**entity;
+                self.collide(entity);
                 if entity.interactable() {
-                    // TODO: Ray collision.
-                    if event_handler.is_key_pressed(&VirtualKeyCode::Return) {
-                        self.input_captured = true;
-                        (& mut**entity).interact();
+                    if event_handler.is_key_pressed(&VirtualKeyCode::E) {
+                        let collides = {
+                            let view_ray = Ray3 {
+                                pos: self.collision_mesh.position().clone(),
+                                dir: self.rotation.to_view_vec(),
+                            };
+                            // TODO: This shit don't work.  You need some visual debugging
+                            // tools for meshes and vectors and shit.
+                            entity.collision_mesh().collide_with_ray(view_ray)
+                        };
+
+                        if collides {
+                            self.input_captured = true;
+                            entity.interact();
+                        }
                     } else if event_handler.is_key_pressed(&VirtualKeyCode::Escape) {
                         self.input_captured = false;
-                        (& mut**entity).stop_interact();
+                        entity.stop_interact();
                     }
                 }
             }
         }
     }
 
-    fn interactable(&self) -> bool {
-        false
-    }
+    fn interactable(&self) -> bool { false }
 
     fn interact(&mut self) { }
 
@@ -258,6 +269,5 @@ impl Collide for Player {
 }
 
 impl Render for Player {
-    fn render(&mut self, _: &mut renderer::RenderingContext) {
-    }
+    fn render(&mut self, _: &mut renderer::RenderingContext) { }
 }

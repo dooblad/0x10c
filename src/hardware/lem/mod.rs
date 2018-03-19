@@ -1,5 +1,4 @@
 use entity::Entity;
-use game::event_handler::EventHandler;
 use graphics::Render;
 use graphics::renderer::RenderingContext;
 use graphics::mesh::pixel_quad::PixelQuad;
@@ -10,9 +9,9 @@ use hardware::keyboard::Keyboard;
 use util::collide::Collide;
 use util::collide::sat::CollisionMesh;
 use util::math::{Point3, Vector3};
-use world::EntitySlice;
 use world::collidable::Collidable;
 use world::collidable::obj;
+use world::TickConfig;
 
 const SCREEN_SIZE_IN_PIXELS: (u16, u16) = (128, 96);
 const SCREEN_SIZE_IN_CELLS: (u16, u16) = (32, 12);
@@ -770,10 +769,9 @@ impl Collide for Lem {
 }
 
 impl Entity for Lem {
-    fn tick(&mut self, event_handler: &EventHandler, _: &Vec<Box<Collide>>,
-            _: EntitySlice) {
+    fn tick(&mut self, config: TickConfig) {
         if self.keyboard.focused() {
-            keyboard::try_push_key(&mut self.dcpu, event_handler);
+            keyboard::try_push_key(&mut self.dcpu, config.event_handler);
         }
 
         for _ in 0..10 {

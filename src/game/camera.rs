@@ -63,22 +63,14 @@ impl Camera {
     }
 
     fn characteristic_vectors(rotation: &Rotation) -> (Vector3, Vector3, Vector3) {
-        let &Rotation { horizontal_angle, vertical_angle } = rotation;
-        // TBH, I'm not really sure why we need to add PI here, but this makes it so the
-        // coordinate system is normal with zeroes for both horizontal and vertical
-        // angles.
-        let horizontal_angle = horizontal_angle + std::f32::consts::PI;
+        let &Rotation { horizontal_angle, .. } = rotation;
 
-        let facing_dir = Vector3 {
-            x: vertical_angle.cos() * horizontal_angle.sin(),
-            y: vertical_angle.sin(),
-            z: vertical_angle.cos() * horizontal_angle.cos(),
-        }.normalize();
+        let facing_dir = rotation.to_view_vec();
 
         let right = Vector3 {
-            x: (horizontal_angle - std::f32::consts::PI / 2f32).sin(),
+            x: (horizontal_angle + std::f32::consts::PI / 2f32).sin(),
             y: 0.0,
-            z: (horizontal_angle - std::f32::consts::PI / 2f32).cos(),
+            z: (horizontal_angle + std::f32::consts::PI / 2f32).cos(),
         }.normalize();
 
         let up = right.cross(facing_dir).normalize();

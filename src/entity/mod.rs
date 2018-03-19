@@ -1,13 +1,10 @@
 pub mod player;
 
-use game::event_handler::EventHandler;
 use util::collide::Collide;
-use world::EntitySlice;
+use world::TickConfig;
 
 pub trait Entity : Collide {
-    fn tick(&mut self, event_handler: &EventHandler,
-            collidables: &Vec<Box<Collide>>,
-            entities: EntitySlice);
+    fn tick(&mut self, config: TickConfig);
     fn interactable(&self) -> bool;
     fn interact(&mut self);
     fn stop_interact(&mut self);

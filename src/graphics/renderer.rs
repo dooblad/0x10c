@@ -7,7 +7,7 @@ use graphics;
 use graphics::shadow_map::ShadowMap;
 use graphics::shader::{ShaderConfig, ShaderProgram, ShaderSource, ShaderType};
 use util::math::Point3;
-use world::Renderables;
+use world::{Renderables, RenderConfig};
 
 
 const LIGHT_POSITION: Point3 = Point3 { x: 3.0, y: 5.0, z: 2.0 };
@@ -224,13 +224,13 @@ impl Renderer {
         }
     }
 
-    pub fn render(&mut self, mut renderables: Renderables, camera: &Camera) {
+    pub fn render(&mut self, mut config: RenderConfig, camera: &Camera) {
         self.start_frame(camera);
 
         // Populate shadow map.
-        self.depth_pass(&mut renderables);
+        self.depth_pass(&mut config.renderables);
         // Actually render to screen.
-        self.main_pass(&mut renderables, camera);
+        self.main_pass(&mut config.renderables, camera);
 
         self.end_frame();
     }

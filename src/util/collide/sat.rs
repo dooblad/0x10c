@@ -1,8 +1,9 @@
-use cgmath::EuclideanSpace;
+use cgmath::{InnerSpace, EuclideanSpace};
 use gl::types::GLfloat;
+use std;
 
 use util::collide::aabb::Range;
-use util::math::{Point3, Vector3};
+use util::math::{Point3, Vector3, Ray3};
 use util::mesh::gen_normals;
 use util::mesh::BaseMesh;
 
@@ -88,6 +89,11 @@ impl CollisionMesh {
             return None;
         }
 
+        // TODO: We'll probably need that O(n^2) edge check eventually.
+        // When collisions get more complicated, but we can probably optimize it so once
+        // the current minimum is less than the velocity or something, then we know it's
+        // the minimum axis.
+
         let mut mtv: Option<f32> = None;
         let mut min_axis: Option<Vector3> = None;
         for face in self.faces.iter().chain(other.faces.iter()) {
@@ -99,11 +105,74 @@ impl CollisionMesh {
 
         let mtv = mtv.unwrap();
         if mtv.abs() == 0.0 {
-            // Discard "ghost" collisions.
+            // Discard "ghost" collisions.  They actually happen.  Or at least, they
+            // happened at some point and idk.
             return None;
         }
 
         Some(mtv * min_axis.unwrap())
+    }
+
+    pub fn collide_with_ray(&self, ray: Ray3) -> bool {
+        // Check pg. 199 of Real Time Collision Detection for an explanation of the algo,
+        // my dude.
+        let mut t_min = 0.0f32;
+        let mut t_max = std::f32::INFINITY;
+        for face in &self.faces {
+            let denom = face.normal.dot(ray.dir);
+            let dist = face.normal.dot(face.vertices[0] - ray.pos);
+            if denom == 0.0 {
+                if dist < 0.0 {
+                    return false;
+                }
+            } else {
+                let t = dist / denom;
+                if denom < 0.0 {
+                    if t > t_min {
+                        t_min = t;
+                    }
+                } else {
+                    if t < t_max {
+                        t_max = t;
+                    }
+                }
+                if t_min > t_max {
+                    return false;
+                }
+            }
+            /*
+            let plane_norm = face.normal;
+            // Can use any of the face's vertices as a point for the plane.
+            let plane_pos = face.vertices[0];
+            // Intuitively, this value tells us how much closer incrementing `t` will // bring us to the plane, except it will be negative when the plane's normal
+            // is facing towards us.
+            let vec_dot = plane_norm.dot(ray.dir);
+            if vec_dot == 0.0 {
+                continue;
+            }
+            // "Time" parameter at which the ray contacts the plane.
+            let t = plane_norm.dot(plane_pos - ray.pos) / vec_dot;
+            if vec_dot > 0.0 {
+                // Face is away from us, so adjust `t_max`.
+                if t < t_max {
+                    t_max = t;
+                }
+            } else if vec_dot < 0.0 {
+                // Face is towards us, so adjust `t_min`.
+                if t > t_min {
+                    t_min = t;
+                }
+            }
+            // Ignore the case where the dot product == 0.0.
+
+            // Check that the interval defined by the checks above is empty.  If it is,
+            // there's no collision.
+            if t_max < t_min {
+                return false;
+            }
+            */
+        }
+        true
     }
 
     pub fn translate(&mut self, v: Vector3) {

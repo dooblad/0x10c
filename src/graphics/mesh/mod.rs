@@ -12,8 +12,9 @@ use std::mem;
 use std::ptr;
 
 use graphics::Render;
-use graphics::renderer::RenderingContext;
 use graphics::texture::Texture;
+use world::RenderConfig;
+
 
 struct VertexArray {
     pub vbo_id: GLuint,
@@ -193,8 +194,8 @@ impl Mesh {
 }
 
 impl Render for Mesh {
-    fn render(&mut self, context: &mut RenderingContext) {
-        let uniforms = context.curr_shader().uniforms();
+    fn render(&mut self, config: &mut RenderConfig) {
+        let uniforms = config.render_context.curr_shader().uniforms();
 
         unsafe {
             // Bind.

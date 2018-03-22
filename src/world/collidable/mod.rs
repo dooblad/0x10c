@@ -4,12 +4,12 @@ pub mod rect;
 
 use graphics::Render;
 use graphics::mesh::Mesh;
-use graphics::renderer::RenderingContext;
 use util::collide::Collide;
 use util::collide::sat::CollisionMesh;
 use util::math::Point3;
 use util::mesh::BaseMesh;
 use util::mesh::gen_normals;
+use world::RenderConfig;
 
 
 pub struct Collidable {
@@ -41,8 +41,8 @@ impl Collidable {
 }
 
 impl Render for Collidable {
-    fn render(&mut self, context: &mut RenderingContext) {
-        self.render_mesh.render(context);
+    fn render(&mut self, config: &mut RenderConfig) {
+        self.render_mesh.render(config);
     }
 }
 

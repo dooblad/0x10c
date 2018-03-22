@@ -6,12 +6,13 @@ use game::camera::Camera;
 use graphics;
 use graphics::shadow_map::ShadowMap;
 use graphics::shader::{ShaderConfig, ShaderProgram, ShaderSource, ShaderType};
+use util::debug::DebugState;
 use util::math::Point3;
-use world::{Renderables, RenderConfig};
+use world::RenderConfig;
+use world::Renderables;
 
 
 const LIGHT_POSITION: Point3 = Point3 { x: 3.0, y: 5.0, z: 2.0 };
-const DEBUG: bool = false;
 
 
 #[derive(Debug, PartialEq)]
@@ -133,8 +134,8 @@ impl Renderer {
             shader.bind();
             let uniforms = shader.uniforms();
 
-            // The depth shader uses the far plane for packing z values and other shaders use it
-            // for unpacking those z values.
+            // The depth shader uses the far plane for packing z values and other shaders
+            // use it for unpacking those z values.
             uniforms.send_1f("far_plane", shadow_map.z_range().1);
 
             if shader_name != "depth" {
@@ -142,7 +143,6 @@ impl Renderer {
                 shadow_map.bind_and_send("depth_map", uniforms);
             }
         }
-
 
         Renderer {
             shaders,
@@ -174,17 +174,19 @@ impl Renderer {
         self.display.finish_frame();
     }
 
-    fn depth_pass(&mut self, renderables: &mut Renderables) {
+    fn depth_pass(&mut self, renderables: &mut Renderables, debug_state: &DebugState) {
         unsafe {
-            // Render the depth map with only the insides of meshes showing to fix shadow acne.
+            // Render the depth map with only the insides of meshes showing to fix shadow
+            // acne.
             gl::CullFace(gl::FRONT);
         }
 
-        self.shadow_map.begin_pass(self.light_pos, self.shaders.get_mut("depth").unwrap());
+        self.shadow_map.begin_pass(
+            self.light_pos, self.shaders.get_mut("depth").unwrap());
         {
             let mut context = RenderingContext::new(&mut self.shaders);
             context.set_state(ContextState::Depth);
-            renderables.render_all(&mut context);
+            renderables.render_all(&mut RenderConfig::new(&mut context, debug_state));
         }
         self.shadow_map.end_pass(&self.display);
 
@@ -194,43 +196,46 @@ impl Renderer {
         }
     }
 
-    fn main_pass(&mut self, renderables: &mut Renderables, camera: &Camera) {
+    fn main_pass(&mut self, renderables: &mut Renderables, debug_state: &DebugState,
+                 camera: &Camera) {
         use graphics::mesh::cube;
         use graphics::Render;
 
         let mut context = RenderingContext::new(&mut self.shaders);
+        let config = &mut RenderConfig::new(&mut context, debug_state);
 
-        if DEBUG {
+        if *debug_state == DebugState::DepthBuffer {
             // Visualize depth cube map.
             unsafe {
-                context.bind_shader(String::from("debug"));
+                config.render_context.bind_shader(String::from("debug"));
 
                 let mut camera = camera.clone();
                 camera.set_position(&Point3 { x: 0.0, y: 0.0, z: 0.0 });
 
                 {
-                    let uniforms = context.curr_shader().uniforms();
+                    let uniforms = config.render_context.curr_shader().uniforms();
                     uniforms.send_matrix_4fv("view_matrix", camera.view_matrix());
                 }
 
                 gl::Disable(gl::CULL_FACE);
                 let mut depth_cube = cube::new(5.0);
-                depth_cube.render(&mut context);
+                depth_cube.render(config);
                 gl::Enable(gl::CULL_FACE);
             }
         } else {
-            context.bind_shader(String::from("basic"));
-            renderables.render_all(&mut context);
+            config.render_context.bind_shader(String::from("basic"));
+            renderables.render_all(config);
         }
     }
 
-    pub fn render(&mut self, mut config: RenderConfig, camera: &Camera) {
+    pub fn render(&mut self, mut renderables: Renderables, debug_state: &DebugState,
+                  camera: &Camera) {
         self.start_frame(camera);
 
         // Populate shadow map.
-        self.depth_pass(&mut config.renderables);
+        self.depth_pass(&mut renderables, debug_state);
         // Actually render to screen.
-        self.main_pass(&mut config.renderables, camera);
+        self.main_pass(&mut renderables, debug_state, camera);
 
         self.end_frame();
     }

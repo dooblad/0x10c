@@ -7,12 +7,12 @@ use gl;
 use glutin;
 use glutin::GlContext;
 
-use self::renderer::RenderingContext;
+use world::RenderConfig;
 
 ////////////////////////////////////////////////////////////////////////////////
 
 pub trait Render {
-    fn render(&mut self, context: &mut RenderingContext);
+    fn render(&mut self, config: &mut RenderConfig);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -2,9 +2,9 @@ use image::RgbaImage;
 
 use graphics::mesh::Mesh;
 use graphics::Render;
-use graphics::renderer::RenderingContext;
 use graphics::texture::Texture;
 use util::mesh::{expand_indices, gen_normals};
+use world::RenderConfig;
 
 
 /// Stores an array of pixels that, when updated, generates a texture that is then drawn
@@ -97,7 +97,7 @@ impl PixelQuad {
 }
 
 impl Render for PixelQuad {
-    fn render(&mut self, context: &mut RenderingContext) {
-        self.mesh.render(context);
+    fn render(&mut self, config: &mut RenderConfig) {
+        self.mesh.render(config);
     }
 }

@@ -3,19 +3,21 @@ use graphics::renderer::RenderingContext;
 use entity::player::Player;
 use entity::Entity;
 use util::collide::Collide;
+use util::debug::DebugState;
 
 
 /// Stores parameters that define what to render each frame and how to render it.
 pub struct RenderConfig<'a> {
-    pub renderables: &'a mut Renderables<'a>,
-    pub debug: bool,
+    pub render_context: &'a mut RenderingContext<'a>,
+    pub debug_state: &'a DebugState,
 }
 
 impl<'a> RenderConfig<'a> {
-    pub fn new(renderables: &'a mut Renderables<'a>, debug: bool) -> RenderConfig<'a> {
+    pub fn new(render_context: &'a mut RenderingContext<'a>,
+               debug_state: &'a DebugState) -> RenderConfig<'a> {
         RenderConfig {
-            renderables,
-            debug,
+            render_context,
+            debug_state,
         }
     }
 }
@@ -29,14 +31,14 @@ pub struct Renderables<'a> {
 }
 
 impl<'a> Renderables<'a> {
-    pub fn render_all(&mut self, context: &mut RenderingContext) {
+    pub fn render_all(&mut self, config: &mut RenderConfig) {
         for renderable in self.collidables.iter_mut() {
-            renderable.render(context);
+            renderable.render(config);
         }
         for renderable in self.entities.iter_mut() {
-            renderable.render(context);
+            renderable.render(config);
         }
-        self.player.render(context);
+        self.player.render(config);
     }
 }
 

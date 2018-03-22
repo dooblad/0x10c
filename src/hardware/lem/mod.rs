@@ -1,6 +1,5 @@
 use entity::Entity;
 use graphics::Render;
-use graphics::renderer::RenderingContext;
 use graphics::mesh::pixel_quad::PixelQuad;
 use hardware::dcpu::Dcpu;
 use hardware::dcpu::assembler;
@@ -11,7 +10,7 @@ use util::collide::sat::CollisionMesh;
 use util::math::{Point3, Vector3};
 use world::collidable::Collidable;
 use world::collidable::obj;
-use world::TickConfig;
+use world::{TickConfig, RenderConfig};
 
 const SCREEN_SIZE_IN_PIXELS: (u16, u16) = (128, 96);
 const SCREEN_SIZE_IN_CELLS: (u16, u16) = (32, 12);
@@ -652,7 +651,7 @@ jsr set_blink
 
         // TODO: Have some sort of resource manager that clones mesh instances, rather
         // than doing file IO every time.
-        let terminal = obj::new("res/terminal.obj", position);
+        let terminal = obj::new("res/mesh/terminal.obj", position);
 
         let mut screen = PixelQuad::new(
             (SCREEN_SIZE_IN_PIXELS.0 as u32, SCREEN_SIZE_IN_PIXELS.1 as u32),
@@ -753,12 +752,12 @@ jsr set_blink
 }
 
 impl Render for Lem {
-    fn render(&mut self, context: &mut RenderingContext) {
-        context.push_shader_state();
-        context.bind_shader(String::from("unlit"));
-        self.screen.render(context);
-        context.pop_shader_state();
-        self.terminal.render(context);
+    fn render(&mut self, config: &mut RenderConfig) {
+        config.render_context.push_shader_state();
+        config.render_context.bind_shader(String::from("unlit"));
+        self.screen.render(config);
+        config.render_context.pop_shader_state();
+        self.terminal.render(config);
     }
 }
 

@@ -4,9 +4,8 @@ use std;
 use std::ops::Neg;
 
 use game::event_handler::EventHandler;
-use graphics::renderer;
+use graphics::mesh::Mesh;
 use graphics::Render;
-use graphics::mesh::obj;
 use entity::Entity;
 use util::f32::clamp;
 use util::math::{Point3, Ray3, Rotation, Vector2, Vector3};
@@ -14,7 +13,7 @@ use util::collide::aabb;
 use util::collide::aabb::Range;
 use util::collide::Collide;
 use util::collide::sat::CollisionMesh;
-use world::TickConfig;
+use world::{TickConfig, RenderConfig};
 
 
 const PLAYER_BOUNDS: [Range; 3] = [
@@ -37,17 +36,11 @@ pub struct Player {
     fly_mode: bool,
     // If the player is using a computer, for example.
     input_captured: bool,
+    debug_rays: Vec<Mesh>,
 }
 
 impl Player {
     pub fn new() -> Player {
-        let test_position = Point3 {
-            x: 7.0,
-            y: 3.0,
-            z: 0.0,
-        };
-        let mut test_render_mesh = obj::new("res/ramp.obj");
-        test_render_mesh.move_to(test_position);
         let position = Point3 { x: 0.0, y: 4.0, z: 0.0 };
         Player {
             collision_mesh: aabb::new(PLAYER_BOUNDS, position),
@@ -59,6 +52,7 @@ impl Player {
             on_ground: false,
             fly_mode: true,
             input_captured: false,
+            debug_rays: Vec::new(),
         }
     }
 
@@ -269,5 +263,9 @@ impl Collide for Player {
 }
 
 impl Render for Player {
-    fn render(&mut self, _: &mut renderer::RenderingContext) { }
+    fn render(&mut self, config: &mut RenderConfig) {
+        for mut ray in self.debug_rays.iter_mut() {
+            ray.render(config);
+        }
+    }
 }

@@ -18,6 +18,7 @@ use game::camera::Camera;
 use hardware::lem::Lem;
 use util::collide::Collide;
 use util::math::Point3;
+use util::debug::DebugState;
 
 use self::collidable::{cube, obj, rect};
 
@@ -27,7 +28,7 @@ pub struct World {
     collidables: Vec<Box<Collide>>,
     entities: Vec<Box<Entity>>,
     renderer: Renderer,
-    debug: bool,
+    debug_state: DebugState,
 }
 
 impl World {
@@ -85,19 +86,19 @@ impl World {
             z: -25.0,
         })));
 
-        collidables.push(Box::new(obj::new("res/globe.obj", Point3 {
+        collidables.push(Box::new(obj::new("res/mesh/globe.obj", Point3 {
             x: 0.0,
             y: 8.0,
             z: 0.0,
         })));
 
-        collidables.push(Box::new(obj::new("res/ramp.obj", Point3 {
+        collidables.push(Box::new(obj::new("res/mesh/ramp.obj", Point3 {
             x: 5.0,
             y: 0.0,
             z: 17.0,
         })));
 
-        collidables.push(Box::new(obj::new("res/ramp_steep.obj", Point3 {
+        collidables.push(Box::new(obj::new("res/mesh/ramp_steep.obj", Point3 {
             x: -2.0,
             y: 0.0,
             z: 17.0,
@@ -116,13 +117,13 @@ impl World {
             collidables,
             entities,
             renderer: Renderer::new(display),
-            debug: false,
+            debug_state: DebugState::None,
         }
     }
 
     pub fn tick(&mut self, event_handler: &EventHandler) {
         if event_handler.is_key_pressed(&VirtualKeyCode::Grave) {
-            self.debug = !self.debug;
+            self.debug_state = self.debug_state.next();
         }
 
 
@@ -131,7 +132,7 @@ impl World {
             self.player.tick(TickConfig::new(event_handler,
                                              &self.collidables,
                                              EntitySlice::new(left, right),
-                                             self.debug));
+                                             &self.debug_state));
         }
 
         for i in 0..self.entities.len() {
@@ -140,16 +141,17 @@ impl World {
             mid[0].tick(TickConfig::new(event_handler,
                                         &self.collidables,
                                         EntitySlice::new(lsplit, rsplit),
-                                        self.debug));
+                                        &self.debug_state));
         }
     }
 
     pub fn render(&mut self, camera: &Camera) {
-        self.renderer.render(RenderConfig::new(&mut Renderables {
+        let renderables = Renderables {
             collidables: &mut self.collidables,
             entities: &mut self.entities,
             player: &mut self.player,
-        }, self.debug), camera);
+        };
+        self.renderer.render(renderables, &self.debug_state, camera);
     }
 
     pub fn player(&mut self) -> &mut Player {

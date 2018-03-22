@@ -1,4 +1,5 @@
 pub mod collide;
+pub mod debug;
 pub mod math;
 pub mod mesh;
 

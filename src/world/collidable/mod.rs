@@ -31,7 +31,7 @@ impl Collidable {
         let render_mesh_normals = gen_normals(&mesh);
         let mut render_mesh = Mesh::new(mesh, None, Some(render_mesh_normals), None,
                                         None);
-        render_mesh.move_to(position);
+        render_mesh.transformation().move_to(position);
 
         Collidable {
             collision_mesh,

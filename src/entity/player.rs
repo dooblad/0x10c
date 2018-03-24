@@ -5,6 +5,7 @@ use std::ops::Neg;
 
 use game::event_handler::EventHandler;
 use graphics::mesh::Mesh;
+use graphics::mesh::obj;
 use graphics::Render;
 use entity::Entity;
 use util::f32::clamp;
@@ -13,6 +14,7 @@ use util::collide::aabb;
 use util::collide::aabb::Range;
 use util::collide::Collide;
 use util::collide::sat::CollisionMesh;
+use util::debug::DebugState;
 use world::{TickConfig, RenderConfig};
 
 
@@ -118,29 +120,29 @@ impl Player {
         let mut velocity_delta = Vector3 { x: 0.0, y: 0.0, z: 0.0 };
         if !self.input_captured {
             // Forward
-            if event_handler.is_key_down(&VirtualKeyCode::W) {
+            if event_handler.is_key_down(VirtualKeyCode::W) {
                 velocity_delta += MOVE_SPEED * forward;
             }
             // Backward
-            if event_handler.is_key_down(&VirtualKeyCode::S) {
+            if event_handler.is_key_down(VirtualKeyCode::S) {
                 velocity_delta += MOVE_SPEED * forward.neg();
             }
             // Left
-            if event_handler.is_key_down(&VirtualKeyCode::A) {
+            if event_handler.is_key_down(VirtualKeyCode::A) {
                 velocity_delta += MOVE_SPEED * right.neg();
             }
             // Right
-            if event_handler.is_key_down(&VirtualKeyCode::D) {
+            if event_handler.is_key_down(VirtualKeyCode::D) {
                 velocity_delta += MOVE_SPEED * right;
             }
 
             if self.fly_mode {
                 // Up
-                if event_handler.is_key_down(&VirtualKeyCode::Space) {
+                if event_handler.is_key_down(VirtualKeyCode::Space) {
                     velocity_delta += MOVE_SPEED * up;
                 }
                 // Down
-                if event_handler.is_key_down(&VirtualKeyCode::LShift) {
+                if event_handler.is_key_down(VirtualKeyCode::LShift) {
                     velocity_delta -= MOVE_SPEED * up;
                 }
 
@@ -149,7 +151,7 @@ impl Player {
                 velocity_delta += GRAVITY * up.neg();
 
                 // Up
-                if self.on_ground && event_handler.is_key_pressed(&VirtualKeyCode::Space) {
+                if self.on_ground && event_handler.is_key_pressed(VirtualKeyCode::Space) {
                     velocity_delta.y = 0.0;
                     velocity_delta += JUMP_SPEED * up;
                     self.on_ground = false;
@@ -195,7 +197,7 @@ impl Entity for Player {
             let mut velocity_delta = Vector3 { x: 0.0, y: 0.0, z: 0.0 };
 
             if !self.input_captured {
-                if event_handler.is_key_pressed(&VirtualKeyCode::V) {
+                if event_handler.is_key_pressed(VirtualKeyCode::V) {
                     self.fly_mode = !self.fly_mode;
                 }
 
@@ -212,6 +214,19 @@ impl Entity for Player {
             self.velocity.z *= VELOCITY_DAMPENING_FACTOR;
         }
 
+        if *(config.debug_state) == DebugState::PlayerViewRay {
+            if event_handler.is_key_pressed(VirtualKeyCode::Q) {
+                let mut ray = obj::new("res/mesh/arrow.obj");
+                ray.transformation().move_to(self.position().clone());
+                ray.transformation().rotate(Vector3::new(0.0, 0.0, 1.0));
+                self.debug_rays.push(ray);
+            }
+        }
+
+        for ray in self.debug_rays.iter_mut() {
+            ray.transformation().rotate(Vector3::new(0.0, 0.0, 0.0));
+        }
+
         // Handle collisions.
         {
             self.collision_mesh.translate(self.velocity);
@@ -225,7 +240,7 @@ impl Entity for Player {
                 let mut entity = & mut**entity;
                 self.collide(entity);
                 if entity.interactable() {
-                    if event_handler.is_key_pressed(&VirtualKeyCode::E) {
+                    if event_handler.is_key_pressed(VirtualKeyCode::E) {
                         let collides = {
                             let view_ray = Ray3 {
                                 pos: self.collision_mesh.position().clone(),
@@ -240,7 +255,7 @@ impl Entity for Player {
                             self.input_captured = true;
                             entity.interact();
                         }
-                    } else if event_handler.is_key_pressed(&VirtualKeyCode::Escape) {
+                    } else if event_handler.is_key_pressed(VirtualKeyCode::Escape) {
                         self.input_captured = false;
                         entity.stop_interact();
                     }
@@ -264,8 +279,10 @@ impl Collide for Player {
 
 impl Render for Player {
     fn render(&mut self, config: &mut RenderConfig) {
-        for mut ray in self.debug_rays.iter_mut() {
-            ray.render(config);
+        if *(config.debug_state) == DebugState::PlayerViewRay {
+            for mut ray in self.debug_rays.iter_mut() {
+                ray.render(config);
+            }
         }
     }
 }

@@ -133,39 +133,39 @@ impl Keyboard {
 }
 
 pub fn try_push_key(dcpu: &mut Dcpu, event_handler: &EventHandler) {
-    let is_shifted = event_handler.is_key_down(&LShift) ||
-        event_handler.is_key_down(&RShift);
+    let is_shifted = event_handler.is_key_down(LShift) ||
+        event_handler.is_key_down(RShift);
 
     let mut key_code = 0;
     for (i, &(needs_shift, key)) in KEY_CODE_MAPPINGS.iter().enumerate() {
-        if needs_shift == is_shifted && event_handler.is_key_pressed(&key) {
+        if needs_shift == is_shifted && event_handler.is_key_pressed(key) {
             key_code = (i as u16) + PRINTABLE_CHAR_OFFSET;
             break;
         }
     }
 
     if key_code == 0 {
-        key_code = if event_handler.is_key_pressed(&Back) {
+        key_code = if event_handler.is_key_pressed(Back) {
             0x10
-        } else if event_handler.is_key_pressed(&Return) {
+        } else if event_handler.is_key_pressed(Return) {
             0x11
-        } else if event_handler.is_key_pressed(&Insert) {
+        } else if event_handler.is_key_pressed(Insert) {
             0x12
-        } else if event_handler.is_key_pressed(&Delete) {
+        } else if event_handler.is_key_pressed(Delete) {
             0x13
-        } else if event_handler.is_key_pressed(&Up) {
+        } else if event_handler.is_key_pressed(Up) {
             0x80
-        } else if event_handler.is_key_pressed(&Down) {
+        } else if event_handler.is_key_pressed(Down) {
             0x81
-        } else if event_handler.is_key_pressed(&Left) {
+        } else if event_handler.is_key_pressed(Left) {
             0x82
-        } else if event_handler.is_key_pressed(&Right) {
+        } else if event_handler.is_key_pressed(Right) {
             0x83
-        } else if event_handler.is_key_pressed(&LShift) ||
-            event_handler.is_key_pressed(&RShift) {
+        } else if event_handler.is_key_pressed(LShift) ||
+            event_handler.is_key_pressed(RShift) {
             0x90
-        } else if event_handler.is_key_pressed(&LControl) ||
-            event_handler.is_key_pressed(&RControl) {
+        } else if event_handler.is_key_pressed(LControl) ||
+            event_handler.is_key_pressed(RControl) {
             0x91
         } else {
             0x0

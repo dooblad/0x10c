@@ -656,7 +656,7 @@ jsr set_blink
         let mut screen = PixelQuad::new(
             (SCREEN_SIZE_IN_PIXELS.0 as u32, SCREEN_SIZE_IN_PIXELS.1 as u32),
             SCREEN_SCALE);
-        screen.mesh().move_to(position + Vector3 {
+        screen.mesh().transformation().move_to(position + Vector3 {
             x: SCREEN_OFFSET.0,
             y: SCREEN_OFFSET.1,
             z: SCREEN_OFFSET.2,

@@ -122,7 +122,7 @@ impl World {
     }
 
     pub fn tick(&mut self, event_handler: &EventHandler) {
-        if event_handler.is_key_pressed(&VirtualKeyCode::Grave) {
+        if event_handler.is_key_pressed(VirtualKeyCode::Grave) {
             self.debug_state = self.debug_state.next();
         }
 

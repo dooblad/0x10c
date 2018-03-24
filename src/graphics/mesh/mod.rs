@@ -4,8 +4,6 @@ pub mod rect;
 pub mod tetrahedron;
 pub mod pixel_quad;
 
-use cgmath::SquareMatrix;
-use cgmath::{Point3, Vector3, Matrix4};
 use gl;
 use gl::types::*;
 use std::mem;
@@ -13,6 +11,7 @@ use std::ptr;
 
 use graphics::Render;
 use graphics::texture::Texture;
+use util::math::{Vector3, Transformation};
 use world::RenderConfig;
 
 
@@ -35,13 +34,14 @@ pub enum AttribIndices {
     TexCoords = 2,
 }
 
+
 pub struct Mesh {
     vao_id: GLuint,
     positions: VertexArray,
     indices: Option<IndexArray>,
     normals: Option<VertexArray>,
     tex_coords: Option<VertexArray>,
-    model_matrix: Matrix4<GLfloat>,
+    transformation: Transformation,
     diffuse_texture: Option<Texture>,
     // Need this for when we bind an empty texture.
     textured: bool,
@@ -115,40 +115,10 @@ impl Mesh {
             indices: i,
             normals: n,
             tex_coords: t,
-            model_matrix: Matrix4::identity(),
+            transformation: Transformation::new(),
             diffuse_texture,
             textured,
         }
-    }
-
-    pub fn move_to(&mut self, position: Point3<GLfloat>) {
-        // The rightmost column of a model matrix is where translation data is stored.
-        self.model_matrix[3][0] = position[0];
-        self.model_matrix[3][1] = position[1];
-        self.model_matrix[3][2] = position[2];
-    }
-
-    pub fn rotate(&mut self, magnitude: f32, axes: Vector3<GLfloat>) {
-        let x_mag = axes[0] * magnitude;
-        self.model_matrix[1][1] += x_mag.cos();
-        self.model_matrix[2][1] -= x_mag.sin();
-        self.model_matrix[1][2] += x_mag.sin();
-        self.model_matrix[2][2] += x_mag.cos();
-
-        let y_mag = axes[1] * magnitude;
-        self.model_matrix[0][0] += y_mag.cos();
-        self.model_matrix[2][0] += y_mag.sin();
-        self.model_matrix[0][2] -= y_mag.sin();
-        self.model_matrix[2][2] += y_mag.cos();
-
-        let z_mag = axes[2] * magnitude;
-        self.model_matrix[0][0] += z_mag.cos();
-        self.model_matrix[1][0] -= z_mag.sin();
-        self.model_matrix[0][1] += z_mag.sin();
-        self.model_matrix[1][1] += z_mag.cos();
-
-        // TODO: Test method.
-        panic!("Method not tested!");
     }
 
     unsafe fn gen_vbo(attrib_index: GLuint, num_components: GLint,
@@ -191,6 +161,11 @@ impl Mesh {
     pub fn set_diffuse_texture(&mut self, diffuse_texture: Texture) {
         self.diffuse_texture = Some(diffuse_texture);
     }
+
+    /// Use this to manipulate the mesh's translation, rotation, and scaling.
+    pub fn transformation(&mut self) -> &mut Transformation {
+        &mut self.transformation
+    }
 }
 
 impl Render for Mesh {
@@ -222,7 +197,8 @@ impl Render for Mesh {
             }
 
             // Set model matrix.
-            uniforms.send_matrix_4fv("model_matrix", self.model_matrix);
+            uniforms.send_matrix_4fv("model_matrix",
+                                     self.transformation.to_model_matrix());
 
             match self.indices {
                 Some(ref i) => {

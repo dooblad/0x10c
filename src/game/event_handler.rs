@@ -115,11 +115,11 @@ impl EventHandler {
         return self.pressed_mouse_buttons.contains(&3);
     }
 
-    pub fn is_key_down(&self, key: &glutin::VirtualKeyCode) -> bool {
-        return self.pressed_keys.contains(key);
+    pub fn is_key_down(&self, key: glutin::VirtualKeyCode) -> bool {
+        return self.pressed_keys.contains(&key);
     }
 
-    pub fn is_key_pressed(&self, key: &glutin::VirtualKeyCode) -> bool {
-        return self.pressed_keys.contains(key) && !self.last_pressed_keys.contains(key);
+    pub fn is_key_pressed(&self, key: glutin::VirtualKeyCode) -> bool {
+        return self.pressed_keys.contains(&key) && !self.last_pressed_keys.contains(&key);
     }
 }
